@@ -285,3 +285,4 @@ Temporary Items
 package-lock.json
 plans/
 prs/
+.zbscanhelper.zig
