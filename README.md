@@ -24,8 +24,7 @@ for [basically zero overhead](#benchmark).
 
 ### Roadmap
 
-Goal of `bunv` is to provide a PoC for what version management might look like built into Bun. At the time of writing,
-that's basically done.
+Goal of `bunv` is to provide a version management solution for Bun.
 
 ## Installation
 
