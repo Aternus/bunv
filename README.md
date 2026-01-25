@@ -64,7 +64,7 @@ brew install simnalamburt/x/bunv
 ### Build from Source
 
 1. Uninstall [`bun`](https://bun.sh/docs/installation#uninstall) and remove `~/.bun/bin` from your path
-2. Install [Zig](https://ziglang.org/)
+2. Install [Zig](https://ziglang.org/) (>= 0.15.2)
 3. Build the executables (`bun`, `bunx`, `bunv`)
    ```sh
    zig build -Doptimize=ReleaseFast --prefix ~/.bunv
@@ -94,7 +94,7 @@ Installing...
 ✓ Done! Bun v1.3.6 is installed
 ```
 
-Bunv also ships its own executable: `bunv`. Right now, it has 2 commands:
+Bunv also ships its own executable: `bunv`. Right now, it has 4 commands:
 
 1. List installed versions:
    ```sh
@@ -113,8 +113,16 @@ Bunv also ships its own executable: `bunv`. Right now, it has 2 commands:
 2. Remove an installed version:
    ```sh
    bunv rm 1.1.26
-   # or just delete the directory
-   rm -rf ~/.bunv/versions/1.1.26
+   ```
+3. Remove Bun installations found on this machine:
+   ```sh
+   bunv prune
+   # or skip confirmation
+   bunv prune --yes
+   ```
+4. Show help:
+   ```sh
+   bunv help
    ```
 
 If you're not in a project, Bunv will use the newest version installed locally, or if there is none, it will download
@@ -214,6 +222,11 @@ Modified args: { ~/.bunv/versions/1.3.6/bin/bun, --version }
 1.3.6
 ```
 
+## Environment Variables
+
+- `BUNV_AUTO_INSTALL=1` to auto-install missing versions without prompting (useful in non-interactive shells).
+- `BUNV_INSTALL` to change the base install directory (defaults to `~/.bunv`).
+
 ## Troubleshooting
 
 - `which bun` doesn't show `~/.bunv/bin/bun`: ensure `~/.bunv/bin` is at the front of your `PATH`.
@@ -238,7 +251,7 @@ $ ./zig-out/bin/bunx --version
 $ ./zig-out/bin/bunv help
 
 # Build and install production executables to ~/.bunv/bin
-$ zig build --release=fast --prefix ~/.bunv
+$ zig build -Doptimize=ReleaseFast --prefix ~/.bunv
 ```
 
 ## Release
