@@ -15,6 +15,15 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
     const is_debug = try isDebug(allocator);
     if (is_debug) std.debug.print("Executable: {}\n", .{cmd});
 
+    var args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+
+    if (cmd == .bun and args.len > 1 and mem.eql(u8, args[1], "upgrade")) {
+        std.debug.print("bun upgrade is a no-op under bunv. Update your version file instead.\n", .{});
+        std.debug.print("See: https://github.com/aklinker1/bunv#upgrading-bun\n", .{});
+        std.process.exit(0);
+    }
+
     const config_dir = try getConfigDir(allocator, is_debug);
     defer allocator.free(config_dir);
 
@@ -47,9 +56,6 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
 
     try new_args.append(bin);
     if (cmd == .bunx) try new_args.append("x");
-
-    var args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
 
     for (args[1..]) |arg| {
         try new_args.append(arg);
