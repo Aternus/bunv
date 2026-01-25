@@ -26,10 +26,7 @@ bunx oxlint@latest
 
 - Automatic version selection for `bun` and `bunx`
 - Manage installed versions with `bunv`
-- Read the project version from multiple files:
-    - `package.json`'s `packageManager` field (just like Corepack)
-    - `.bun-version`
-    - `.tool-versions`
+- Read the Bun version from `package.json`'s `packageManager` field, `.bun-version`, or `.tool-versions`
 
 ## How Bunv Chooses a Version
 
