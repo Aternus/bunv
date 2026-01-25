@@ -85,7 +85,7 @@ pub fn run(allocator: mem.Allocator, config_dir: []const u8, args: []const [:0]u
     var report = try scanAll(allocator, config_dir, options);
     defer report.deinit(allocator);
 
-    printReport(report);
+    try printReport(allocator, report);
 
     const actionable = countActionable(report.items.items);
     if (actionable == 0) {
@@ -206,13 +206,20 @@ fn findOfficialInstall(allocator: mem.Allocator, config_dir: []const u8, report:
 
         const bin = try bunBinaryPath(allocator, install_dir);
         defer allocator.free(bin);
-        if (!pathExists(bin)) continue;
+        const install_dir_exists = dirExists(install_dir);
+        const bin_exists = pathExists(bin);
+        if (!install_dir_exists and !bin_exists) continue;
 
         var paths = std.array_list.Managed([]const u8).init(allocator);
         try paths.append(try allocator.dupe(u8, install_dir));
-        try paths.append(try allocator.dupe(u8, bin));
+        if (bin_exists) {
+            try paths.append(try allocator.dupe(u8, bin));
+        }
 
-        const warning = try allocator.dupe(u8, "Shell profile edits (BUN_INSTALL/PATH) may need manual cleanup");
+        const warning = if (!bin_exists)
+            try allocator.dupe(u8, "bun binary not found; removing install dir only")
+        else
+            try allocator.dupe(u8, "Shell profile edits (BUN_INSTALL/PATH) may need manual cleanup");
 
         const item = Item{
             .source = .official,
@@ -463,16 +470,31 @@ fn findUnknownPathBuns(allocator: mem.Allocator, report: *Report) !void {
     try report.items.append(item);
 }
 
-fn printReport(report: Report) void {
-    std.debug.print("{s}Bun installations found:{s}\n", .{ c.bold, c.reset });
-
-    printSection(report.items.items, .bunv, "Bunv managed versions", c.yellow);
-    printSection(report.items.items, .official, "Official installer", c.bold);
-    printSection(report.items.items, .brew, "Homebrew", c.bold);
-    printSection(report.items.items, .linux_pkg, "Linux package managers", c.bold);
-    printSection(report.items.items, .windows_pkg, "Windows package managers", c.bold);
-    printSection(report.items.items, .unknown, "Unknown / unmanaged", c.bold);
+fn printReport(allocator: mem.Allocator, report: Report) !void {
+    try printBunvSection(allocator, report.items.items);
+    printSection(report.items.items, .official, "Official installer installations", c.bold);
+    printSection(report.items.items, .brew, "Homebrew installations", c.bold);
+    printSection(report.items.items, .linux_pkg, "Linux package manager installations", c.bold);
+    printSection(report.items.items, .windows_pkg, "Windows package manager installations", c.bold);
+    printSection(report.items.items, .unknown, "Unknown / unmanaged installations", c.bold);
     std.debug.print("\n", .{});
+}
+
+fn printBunvSection(allocator: mem.Allocator, items: []Item) !void {
+    _ = allocator;
+    var count: usize = 0;
+    for (items) |item| {
+        if (item.source == .bunv) count += 1;
+    }
+    if (count == 0) return;
+
+    std.debug.print("{s}Bunv managed installations:{s}\n", .{ c.bold, c.reset });
+    for (items) |item| {
+        if (item.source != .bunv) continue;
+        const version_dir = item.paths.items[0];
+        std.debug.print("  {s}{s}{s}\n", .{ c.bold, c.blue, item.label });
+        std.debug.print("    {s}└─{s} Directory: {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, version_dir, c.reset });
+    }
 }
 
 fn printSection(items: []Item, source: Source, title: []const u8, color: []const u8) void {
@@ -593,6 +615,16 @@ fn pathExists(path: []const u8) bool {
         error.FileNotFound => return false,
         else => return false,
     };
+    return true;
+}
+
+fn dirExists(path: []const u8) bool {
+    var dir = std.fs.openDirAbsolute(path, .{}) catch |err| switch (err) {
+        error.FileNotFound => return false,
+        error.NotDir => return false,
+        else => return false,
+    };
+    dir.close();
     return true;
 }
 
