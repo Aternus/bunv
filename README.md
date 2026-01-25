@@ -1,7 +1,7 @@
 # Bunv
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/aklinker1/bunv/blob/main/LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/aklinker1/bunv?style=social)](https://github.com/aklinker1/bunv)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Aternus/bunv/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/Aternus/bunv?style=social)](https://github.com/Aternus/bunv)
 
 Bunv makes Bun versioning effortless.
 
@@ -11,7 +11,7 @@ correct, reproducible, and fast with near‑zero overhead (see [Benchmark](#benc
 ## Quick Start
 
 ```sh
-curl -sL https://raw.githubusercontent.com/aklinker1/bunv/main/install.sh | sh
+curl -sL https://raw.githubusercontent.com/Aternus/bunv/main/install.sh | sh
 export PATH="$HOME/.bunv/bin:$PATH"
 which bun
 ```
@@ -56,7 +56,7 @@ brew install simnalamburt/x/bunv
 1. Uninstall [`bun`](https://bun.sh/docs/installation#uninstall) and remove `~/.bun/bin` from your path
 2. Run installer:
    ```sh
-   curl -sL https://raw.githubusercontent.com/aklinker1/bunv/main/install.sh | sh
+   curl -sL https://raw.githubusercontent.com/Aternus/bunv/main/install.sh | sh
    ```
 3. Add `~/.bunv/bin` to your `PATH`
    ```sh
@@ -246,7 +246,7 @@ $ zig build --release=fast --prefix ~/.bunv
 
 ## Release
 
-To create a release, run the ["Release" action](https://github.com/aklinker1/bunv/actions/workflows/release.yml).
+To create a release, run the ["Release" action](https://github.com/Aternus/bunv/actions/workflows/release.yml).
 
 This project uses conventional commits, so the release workflow will bump the version and create the GitHub release
 automatically.

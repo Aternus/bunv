@@ -90,7 +90,7 @@ fn printInstalledVersions(allocator: mem.Allocator, config_dir: []const u8, vers
 }
 
 fn printHelp() !void {
-    std.debug.print("\n{s}{s}Bunv{s} - Manage installed versions of Bun {s}({f}){s}\n\n", .{ c.bold, c.blue, c.reset, c.dim, config.version, c.reset });
+    std.debug.print("\n{s}{s}Bunv{s} - The Bun version manager {s}({f}){s}\n\n", .{ c.bold, c.blue, c.reset, c.dim, config.version, c.reset });
     std.debug.print("{s}Commands:{s}\n", .{ c.bold, c.reset });
     std.debug.print("                List installed Bun versions\n", .{});
     std.debug.print("  {s}{s}rm{s} {s}<version>{s}  Remove an installed Bun version\n", .{ c.bold, c.yellow, c.reset, c.dim, c.reset });

@@ -20,7 +20,7 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
 
     if (cmd == .bun and args.len > 1 and mem.eql(u8, args[1], "upgrade")) {
         std.debug.print("bun upgrade is a no-op under bunv. Update your version file instead.\n", .{});
-        std.debug.print("See: https://github.com/aklinker1/bunv#upgrading-bun\n", .{});
+        std.debug.print("See: https://github.com/Aternus/bunv#upgrading-bun\n", .{});
         std.process.exit(0);
     }
 
