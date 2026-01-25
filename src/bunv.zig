@@ -1,4 +1,5 @@
 const std = @import("std");
+const fs = std.fs;
 const mem = std.mem;
 const utils = @import("utils.zig");
 const vm = @import("vm.zig");
@@ -75,8 +76,12 @@ fn printInstalledVersions(allocator: mem.Allocator, config_dir: []const u8, vers
         const bin = try vm.getBinPath(allocator, config_dir, version);
         defer allocator.free(bin);
 
+        const global_dir = try fs.path.join(allocator, &[_][]const u8{ config_dir, "versions", version, "install", "global" });
+        defer allocator.free(global_dir);
+
         std.debug.print("  {s}{s}v{s}{s}\n", .{ c.bold, c.blue, version, c.reset });
         std.debug.print("    {s}│ {s} Directory: {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, directory, c.reset });
+        std.debug.print("    {s}│ {s} Global:    {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, global_dir, c.reset });
         std.debug.print("    {s}└─{s} Bin:       {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bin, c.reset });
     }
 }

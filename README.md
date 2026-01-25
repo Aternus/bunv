@@ -3,15 +3,24 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/aklinker1/bunv/blob/main/LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/aklinker1/bunv?style=social)](https://github.com/aklinker1/bunv)
 
+Bunv makes Bun versioning effortless.
+
+It automatically downloads, manages, and runs the exact Bun version each project needs, so your tooling is always
+correct, reproducible, and fast with near‑zero overhead (see [Benchmark](#benchmark)).
+
+## Quick Start
+
 ```sh
 curl -sL https://raw.githubusercontent.com/aklinker1/bunv/main/install.sh | sh
+export PATH="$HOME/.bunv/bin:$PATH"
+which bun
 ```
 
-Zero config wrapper around [Bun](https://bun.sh/) that automatically downloads, manages, and executes the version of
-`bun` required by each of your projects.
-
-Basically [`corepack`](https://github.com/nodejs/corepack) for Bun! But written in Zig
-for [basically zero overhead](#benchmark).
+```sh
+bun --version
+bun i
+bunx oxlint@latest
+```
 
 ## Features
 
@@ -22,9 +31,15 @@ for [basically zero overhead](#benchmark).
     - `.bun-version`
     - `.tool-versions`
 
-### Roadmap
+## How Bunv Chooses a Version
 
-Goal of `bunv` is to provide a version management solution for Bun.
+Bunv checks for a Bun version in this order:
+
+1. `package.json` (`packageManager: "bun@x.y.z"`)
+2. `.bun-version`
+3. `.tool-versions`
+4. Latest locally installed version
+5. Latest remote release (downloaded on first use)
 
 ## Installation
 
@@ -38,17 +53,20 @@ brew install simnalamburt/x/bunv
 
 ### Use Prebuilt Binaries
 
-1. Uninstall [`bun`](https://bun.sh/docs/installation#uninstall) and/or remove `~/.bun/bin` from your path
+1. Uninstall [`bun`](https://bun.sh/docs/installation#uninstall) and remove `~/.bun/bin` from your path
 2. Run installer:
    ```sh
    curl -sL https://raw.githubusercontent.com/aklinker1/bunv/main/install.sh | sh
    ```
 3. Add `~/.bunv/bin` to your `PATH`
+   ```sh
+   export PATH="$HOME/.bunv/bin:$PATH"
+   ```
 4. Ensure `which bun` outputs `~/.bunv/bin/bun`
 
-### Build from source
+### Build from Source
 
-1. Uninstall [`bun`](https://bun.sh/docs/installation#uninstall) or remove `~/.bun/bin` from your path
+1. Uninstall [`bun`](https://bun.sh/docs/installation#uninstall) and remove `~/.bun/bin` from your path
 2. Install [Zig](https://ziglang.org/)
 3. Build the executables (`bun`, `bunx`, `bunv`)
    ```sh
@@ -58,7 +76,7 @@ brew install simnalamburt/x/bunv
    ```sh
    export PATH="$HOME/.bunv/bin:$PATH"
    ```
-5. Double-check that `which bun` outputs `~/.bunv/bin/bun`
+5. Ensure `which bun` outputs `~/.bunv/bin/bun`
 
 ## Usage
 
@@ -87,11 +105,11 @@ Bunv also ships its own executable: `bunv`. Right now, it has 2 commands:
    Installed versions:
      v1.1.26
        │  Directory: ~/.bunv/versions/1.1.26
-       │  Bin Dir:   ~/.bunv/versions/1.1.26/bin
+       │  Global:    ~/.bunv/versions/1.1.26/install/global
        └─ Bin:       ~/.bunv/versions/1.1.26/bin/bun
     v1.3.6
       │  Directory: ~/.bunv/versions/1.3.6
-      │  Bin Dir:   ~/.bunv/versions/1.3.6/bin
+      │  Global:    ~/.bunv/versions/1.3.6/install/global
       └─ Bin:       ~/.bunv/versions/1.3.6/bin/bun
      ...
    ```
@@ -105,11 +123,15 @@ Bunv also ships its own executable: `bunv`. Right now, it has 2 commands:
 If you're not in a project, Bunv will use the newest version installed locally, or if there is none, it will download
 and install the latest release.
 
+### Global Installs
+
+Global installs are versioned. When you run `bun -g`, bunv sets Bun's global install directories to live under the
+selected version (e.g. `~/.bunv/versions/<version>/install/global`). This keeps global packages isolated per Bun
+version.
+
 ### Upgrading Bun
 
 With bunv, `bun upgrade` doesn't do anything.
-
-Global installs are versioned: when you run `bun -g`, bunv sets Bun's global install directories to live under the selected version (e.g. `~/.bunv/versions/<version>/install/global`).
 
 Instead, update the version of bun in your `package.json`, `.bun-version`, or `.tool-versions` file, and it will be
 installed the next time you run a `bun` command.
@@ -194,6 +216,12 @@ Modified args: { ~/.bunv/versions/1.3.6/bin/bun, --version }
 ---
 1.3.6
 ```
+
+## Troubleshooting
+
+- `which bun` doesn't show `~/.bunv/bin/bun`: ensure `~/.bunv/bin` is at the front of your `PATH`.
+- `bun upgrade` does nothing: update your version file instead (see [Upgrading Bun](#upgrading-bun)).
+- No versions installed: run any `bun` command in a project with a version file or use `bun --version` to auto-install.
 
 ## Development
 
