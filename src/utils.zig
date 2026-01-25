@@ -30,6 +30,18 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
     const bin = try fs.path.join(allocator, &[_][]const u8{ config_dir, "versions", project_version, "bin", "bun" });
     defer allocator.free(bin);
 
+    const global_install_dir = try fs.path.join(allocator, &[_][]const u8{
+        config_dir,
+        "versions",
+        project_version,
+        "install",
+        "global",
+    });
+    defer allocator.free(global_install_dir);
+
+    const global_bin_dir = try fs.path.join(allocator, &[_][]const u8{ config_dir, "versions", project_version, "bin" });
+    defer allocator.free(global_bin_dir);
+
     var new_args = try std.array_list.Managed([]const u8).initCapacity(allocator, 5);
     defer new_args.deinit();
 
@@ -44,7 +56,14 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
     }
 
     if (is_debug) std.debug.print("Original args: {any}\nModified args: {any}\n---\n", .{ args, new_args.items });
-    return runBunCmd(allocator, new_args.items);
+
+    var env_map = try std.process.getEnvMap(allocator);
+    defer env_map.deinit();
+
+    try env_map.put("BUN_INSTALL_GLOBAL_DIR", global_install_dir);
+    try env_map.put("BUN_INSTALL_BIN", global_bin_dir);
+
+    return runBunCmd(allocator, new_args.items, &env_map);
 }
 
 /// Grab the user's home directory
@@ -95,14 +114,19 @@ pub fn file_exists(file: []u8) !bool {
     return true;
 }
 
-fn runBunCmd(allocator: mem.Allocator, args: [][]const u8) (std.process.ExecvError || std.process.Child.SpawnError) {
+fn runBunCmd(
+    allocator: mem.Allocator,
+    args: [][]const u8,
+    env_map: *const std.process.EnvMap,
+) (std.process.ExecvError || std.process.Child.SpawnError) {
     if (builtin.os.tag != .windows) {
-        return std.process.execv(allocator, args);
+        return std.process.execve(allocator, args, env_map);
     } else {
         var proc = std.process.Child.init(args, allocator);
         proc.stdin_behavior = .Inherit;
         proc.stdout_behavior = .Inherit;
         proc.stderr_behavior = .Inherit;
+        proc.env_map = env_map;
         try proc.spawn();
         switch (try proc.wait()) {
             .Exited => |code| std.process.exit(code),
