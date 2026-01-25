@@ -109,6 +109,8 @@ and install the latest release.
 
 With bunv, `bun upgrade` doesn't do anything.
 
+Global installs are versioned: when you run `bun -g`, bunv sets Bun's global install directories to live under the selected version (e.g. `~/.bunv/versions/<version>/install/global`).
+
 Instead, update the version of bun in your `package.json`, `.bun-version`, or `.tool-versions` file, and it will be
 installed the next time you run a `bun` command.
 
