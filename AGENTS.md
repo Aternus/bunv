@@ -19,7 +19,7 @@
 
 ## Feature Work
 
-When starting a feature, first create a plan at `plans/<feature-name>.md`. Iterate through the plan with the human and
+When starting a feature, first create a plan at `.dev/plans/<feature-name>.md`. Iterate through the plan with the human and
 get explicit approval before starting work.
 
 ## Creating PRs
@@ -29,4 +29,4 @@ commits, the title MUST be in the format `<type>(<scope>): <subject>`. Scope is 
 
 Otherwise, you can use any format for commits; it's just the PR title that should be conventional.
 
-When asked to create a PR description, save it to `./prs/<pr-title>.md`.
+When asked to create a PR description, save it to `./.dev/prs/<feature-name>.md`.
