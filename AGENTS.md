@@ -28,3 +28,5 @@ This project squashes and merges PRs, the title being the only text in the commi
 commits, the title MUST be in the format `<type>(<scope>): <subject>`. Scope is optional.
 
 Otherwise, you can use any format for commits; it's just the PR title that should be conventional.
+
+When asked to create a PR description, save it to `./prs/<pr-title>.md`.
