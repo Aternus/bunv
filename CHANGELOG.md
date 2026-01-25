@@ -2,7 +2,15 @@
 
 ### Features
 
-* support Zig 0.15.x
+* support Zig 0.15.x (minimum 0.15.2)
+* add Upgrade Guard so `bun upgrade` is a no-op under bunv
+* add versioned global package installs per Bun version
+* add `bunv prune` to remove Bun installations found on this machine
+* improve info display output
+
+### Bug Fixes
+
+* fix arguments display in debug mode
 
 # [0.5.0](https://github.com/Aternus/bunv/compare/v0.4.3...v0.5.0) (2025-10-16)
 
