@@ -45,6 +45,6 @@ fn addExe(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin
     b.installArtifact(exe);
 
     const run_exe = b.addRunArtifact(exe);
-    const run_exe_step = b.step(name, "Run the bunx executable");
+    const run_exe_step = b.step(name, "Run the " ++ name ++ " executable");
     run_exe_step.dependOn(&run_exe.step);
 }
