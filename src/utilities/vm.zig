@@ -41,7 +41,6 @@ pub fn getInstalledVersions(allocator: mem.Allocator, bunv_install_dir: []const 
     return result;
 }
 
-/// Reads the different files potentially containing the bun version to use. Walks up the directory tree until it finds one of the files.
 pub fn detectProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 {
     const files = comptime [_]VersionFile{
         PackageJsonVersionFile.init(),
