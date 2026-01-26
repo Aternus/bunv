@@ -85,7 +85,7 @@ pub fn getInstalledVersions(allocator: mem.Allocator, install_dir: []const u8) !
 
     var versions_dir = fs_utils.openDirAbsolute(versions_dir_path, .{ .iterate = true }) catch |err| switch (err) {
         error.FileNotFound => return result,
-        else => |e| return e,
+        else => return err,
     };
     defer versions_dir.close();
 
@@ -130,7 +130,7 @@ pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 
 
             const file = fs_utils.openFileAbsolute(file_path, .{}) catch |err| switch (err) {
                 error.FileNotFound => continue,
-                else => |e| return e,
+                else => return err,
             };
             defer file.close();
 

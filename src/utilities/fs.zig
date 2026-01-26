@@ -12,7 +12,7 @@ pub fn pathExists(path: []const u8) bool {
 pub fn fileExists(file: []const u8) !bool {
     fs.accessAbsolute(file, .{}) catch |err| switch (err) {
         error.FileNotFound => return false,
-        else => |e| return e,
+        else => return err,
     };
     return true;
 }
@@ -46,7 +46,7 @@ pub fn makeDirAbsolute(path: []const u8) !void {
 pub fn ensureDirAbsolute(path: []const u8) !void {
     fs.makeDirAbsolute(path) catch |err| switch (err) {
         error.PathAlreadyExists => {},
-        else => |e| return e,
+        else => return err,
     };
 }
 
