@@ -4,7 +4,7 @@ const fs_utils = @import("utilities/fs.zig");
 const builtin = @import("builtin");
 const config = @import("config");
 const cli_args = @import("cli/args.zig");
-const dispatcher = @import("commands/dispatcher.zig");
+const commander = @import("commands/commander.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -26,5 +26,5 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, args);
 
     const parsedArgs = cli_args.parseArgs(args);
-    try dispatcher.dispatch(allocator, install_dir, parsedArgs);
+    try commander.dispatch(allocator, install_dir, parsedArgs);
 }
