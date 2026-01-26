@@ -25,6 +25,6 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    const parsed = cli_args.parseArgs(args);
-    try dispatcher.dispatch(allocator, bunv_install_dir, parsed);
+    const parsedArgs = cli_args.parseArgs(args);
+    try dispatcher.dispatch(allocator, bunv_install_dir, parsedArgs);
 }
