@@ -32,7 +32,7 @@ pub fn printHelp() void {
     std.debug.print("{s}Commands:{s}\n", .{ c.bold, c.reset });
     std.debug.print("                    List installed Bun versions\n", .{});
     std.debug.print("  {s}{s}remove{s} {s}<version>{s}  Remove an installed Bun version\n", .{ c.bold, c.yellow, c.reset, c.dim, c.reset });
-    std.debug.print("  {s}{s}prune{s}             Remove Bun installations found on this machine\n", .{ c.bold, c.yellow, c.reset });
+    std.debug.print("  {s}{s}prune{s}             Remove Bun installs managed by bunv or the official installer\n", .{ c.bold, c.yellow, c.reset });
     std.debug.print("  {s}{s}help{s}              Show this help message\n", .{ c.bold, c.cyan, c.reset });
     std.debug.print("\n", .{});
 }
@@ -60,7 +60,7 @@ fn printVersionDetails(allocator: mem.Allocator, bunv_install_dir: []const u8, v
     const bun_dir_path = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
     defer allocator.free(bun_dir_path);
 
-    const bun_bin_path = try fs_utils.getBunBinPath(allocator, bunv_install_dir, version);
+    const bun_bin_path = try fs_utils.getBunBinaryPath(allocator, bun_dir_path);
     defer allocator.free(bun_bin_path);
 
     const bun_global_packages_path = try fs_utils.getBunGlobalPackagesPath(allocator, bunv_install_dir, version);

@@ -114,7 +114,7 @@ Bunv also ships its own executable: `bunv`. Currently, it has 4 commands:
    ```sh
    bunv rm 1.1.26
    ```
-3. Remove Bun installations found on this machine:
+3. Remove Bun installs managed by bunv or the official installer:
    ```sh
    bunv prune
    # or skip confirmation

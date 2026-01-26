@@ -40,7 +40,7 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
     const bunv_version_dir = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, project_version);
     defer allocator.free(bunv_version_dir);
 
-    const bun_bin = try fs_utils.getBunBinPath(allocator, bunv_install_dir, project_version);
+    const bun_bin = try fs_utils.getBunBinaryPath(allocator, bunv_version_dir);
     defer allocator.free(bun_bin);
 
     var new_args = try std.array_list.Managed([]const u8).initCapacity(allocator, 5);

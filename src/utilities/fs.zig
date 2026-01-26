@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 const fs = std.fs;
 const mem = std.mem;
 
@@ -88,8 +89,11 @@ pub fn getBunVersionDir(allocator: mem.Allocator, bunv_install_dir: []const u8, 
     return try joinPath(allocator, &[_][]const u8{ bunv_install_dir, "versions", version });
 }
 
-pub fn getBunBinPath(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) ![]u8 {
-    return try joinPath(allocator, &[_][]const u8{ bunv_install_dir, "versions", version, "bin", "bun" });
+pub fn getBunBinaryPath(allocator: mem.Allocator, install_dir: []const u8) ![]u8 {
+    if (builtin.os.tag == .windows) {
+        return try joinPath(allocator, &[_][]const u8{ install_dir, "bin", "bun.exe" });
+    }
+    return try joinPath(allocator, &[_][]const u8{ install_dir, "bin", "bun" });
 }
 
 pub fn getBunGlobalPackagesPath(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) ![]u8 {
