@@ -64,7 +64,7 @@ brew install simnalamburt/x/bunv
 ### Build from Source
 
 1. Uninstall [`bun`](https://bun.sh/docs/installation#uninstall) and remove `~/.bun/bin` from your path
-2. Install [Zig](https://ziglang.org/) (>= 0.15.2)
+2. Install [Zig](https://ziglang.org/) (0.15.2)
 3. Build the executables (`bun`, `bunx`, `bunv`)
    ```sh
    zig build -Doptimize=ReleaseFast --prefix ~/.bunv

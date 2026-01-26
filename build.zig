@@ -7,9 +7,9 @@ const bunx = "bunx";
 const bunv = "bunv";
 
 pub fn build(b: *std.Build) !void {
-    const min_zig_version = try std.SemanticVersion.parse("0.15.2");
-    if (std.SemanticVersion.order(builtin.zig_version, min_zig_version) == .lt) {
-        std.debug.print("Bunv requires Zig 0.15.2 or above, got {f}", .{builtin.zig_version});
+    const required_zig_version = try std.SemanticVersion.parse("0.15.2");
+    if (std.SemanticVersion.order(builtin.zig_version, required_zig_version) != .eq) {
+        std.debug.print("Zig 0.15.2 toolchain is required to build Bunv, got {f}", .{builtin.zig_version});
         return error.InvalidZigVersion;
     }
 

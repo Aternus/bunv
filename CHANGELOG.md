@@ -2,7 +2,7 @@
 
 ### Features
 
-- support Zig 0.15.x (minimum 0.15.2)
+- lock Zig toolchain to 0.15.2
 - add Upgrade Guard so `bun upgrade` is a no-op under bunv
 - add versioned global package installs per Bun version
 - add `bunv prune` to remove Bun installations found on this machine
