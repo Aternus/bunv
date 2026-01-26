@@ -4,11 +4,11 @@ const mem = std.mem;
 const fs = std.fs;
 const json = std.json;
 const http = std.http;
-const utils = @import("utils.zig");
-const c = @import("colors.zig");
+const fs_utils = @import("utilities/fs.zig");
+const c = @import("utilities/colors.zig");
 
 pub fn getInstalledVersions(allocator: mem.Allocator, bunv_install_dir: []const u8) !std.array_list.Managed([]const u8) {
-    const versions_dir_path = try getVersionsDir(allocator, bunv_install_dir);
+    const versions_dir_path = try fs_utils.getBunvVersionsDir(allocator, bunv_install_dir);
     defer allocator.free(versions_dir_path);
 
     var result = std.array_list.Managed([]const u8).init(allocator);
@@ -26,10 +26,10 @@ pub fn getInstalledVersions(allocator: mem.Allocator, bunv_install_dir: []const 
         const version = try allocator.dupe(u8, entry.name);
         errdefer allocator.free(version);
 
-        const bin = try getBinPath(allocator, bunv_install_dir, version);
+        const bin = try fs_utils.getBunBinPath(allocator, bunv_install_dir, version);
         defer allocator.free(bin);
 
-        if (try utils.file_exists(bin)) {
+        if (try fs_utils.isFileExists(bin)) {
             try result.append(version);
         } else {
             allocator.free(version);
@@ -148,9 +148,9 @@ pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) ![]const
 }
 
 pub fn ensureVersionDownloaded(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) !void {
-    const bin = try getBinPath(allocator, bunv_install_dir, version);
+    const bin = try fs_utils.getBunBinPath(allocator, bunv_install_dir, version);
     defer allocator.free(bin);
-    if (try utils.file_exists(bin)) {
+    if (try fs_utils.isFileExists(bin)) {
         return;
     }
 
@@ -189,7 +189,7 @@ pub fn ensureVersionDownloaded(allocator: mem.Allocator, bunv_install_dir: []con
 
     // Run install script
 
-    const version_path = try fs.path.join(allocator, &[_][]const u8{ bunv_install_dir, "versions", version });
+    const version_path = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
     defer allocator.free(version_path);
 
     var env = try std.process.getEnvMap(allocator);
@@ -264,16 +264,6 @@ fn confirmInstallation(version: []const u8) !void {
 
     std.debug.print("Installation aborted by user\n", .{});
     std.process.exit(1);
-}
-
-pub fn getVersionsDir(allocator: mem.Allocator, bunv_install_dir: []const u8) ![]u8 {
-    return try fs.path.join(allocator, &[_][]const u8{ bunv_install_dir, "versions" });
-}
-pub fn getVersionDir(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) ![]u8 {
-    return try fs.path.join(allocator, &[_][]const u8{ bunv_install_dir, "versions", version });
-}
-pub fn getBinPath(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) ![]u8 {
-    return try fs.path.join(allocator, &[_][]const u8{ bunv_install_dir, "versions", version, "bin", "bun" });
 }
 
 const VersionFile = struct {

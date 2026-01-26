@@ -1,5 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
+const fs_utils = @import("../utilities/fs.zig");
 const vm = @import("../vm.zig");
 const output = @import("../cli/output.zig");
 
@@ -24,7 +25,7 @@ pub fn run(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []co
         output.fatalFmt("Bun v{s} is not installed", .{version});
     }
 
-    const version_dir = try vm.getVersionDir(allocator, bunv_install_dir, version);
+    const version_dir = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
     defer allocator.free(version_dir);
 
     output.printRemovingVersion(version);

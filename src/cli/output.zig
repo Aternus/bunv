@@ -1,8 +1,8 @@
 const std = @import("std");
 const fs = std.fs;
 const mem = std.mem;
-const vm = @import("../vm.zig");
-const c = @import("../colors.zig");
+const fs_utils = @import("../utilities/fs.zig");
+const c = @import("../utilities/colors.zig");
 const config = @import("config");
 
 pub fn fatal(msg: []const u8) noreturn {
@@ -58,17 +58,17 @@ pub fn printRemovedVersion(version: []const u8) void {
 }
 
 fn printVersionDetails(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) !void {
-    const directory = try vm.getVersionDir(allocator, bunv_install_dir, version);
-    defer allocator.free(directory);
+    const bun_dir_path = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
+    defer allocator.free(bun_dir_path);
 
-    const bin = try vm.getBinPath(allocator, bunv_install_dir, version);
-    defer allocator.free(bin);
+    const bun_bin_path = try fs_utils.getBunBinPath(allocator, bunv_install_dir, version);
+    defer allocator.free(bun_bin_path);
 
-    const global_dir = try fs.path.join(allocator, &[_][]const u8{ bunv_install_dir, "versions", version, "install", "global" });
-    defer allocator.free(global_dir);
+    const bun_global_packages_path = try fs_utils.getBunGlobalPackagesPath(allocator, bunv_install_dir, version);
+    defer allocator.free(bun_global_packages_path);
 
     std.debug.print("  {s}{s}v{s}{s}\n", .{ c.bold, c.blue, version, c.reset });
-    std.debug.print("    {s}│ {s} Directory: {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, directory, c.reset });
-    std.debug.print("    {s}│ {s} Global:    {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, global_dir, c.reset });
-    std.debug.print("    {s}└─{s} Bin:       {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bin, c.reset });
+    std.debug.print("    {s}│ {s} Directory: {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_dir_path, c.reset });
+    std.debug.print("    {s}│ {s} Global:    {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_global_packages_path, c.reset });
+    std.debug.print("    {s}└─{s} Bin:       {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_bin_path, c.reset });
 }

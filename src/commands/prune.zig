@@ -2,9 +2,10 @@ const std = @import("std");
 const builtin = @import("builtin");
 const fs = std.fs;
 const mem = std.mem;
-const utils = @import("../utils.zig");
+const env_utils = @import("../utilities/env.zig");
+const fs_utils = @import("../utilities/fs.zig");
 const vm = @import("../vm.zig");
-const c = @import("../colors.zig");
+const c = @import("../utilities/colors.zig");
 
 pub const Options = struct {
     yes: bool = false,
@@ -154,9 +155,9 @@ fn findBunvInstalls(allocator: mem.Allocator, bunv_install_dir: []const u8, repo
     }
 
     for (installed_versions.items) |version| {
-        const version_dir = try vm.getVersionDir(allocator, bunv_install_dir, version);
+        const version_dir = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
         errdefer allocator.free(version_dir);
-        const bin = try vm.getBinPath(allocator, bunv_install_dir, version);
+        const bin = try fs_utils.getBunBinPath(allocator, bunv_install_dir, version);
         errdefer allocator.free(bin);
 
         var paths = std.array_list.Managed([]const u8).init(allocator);
@@ -192,7 +193,7 @@ fn findOfficialInstall(allocator: mem.Allocator, bunv_install_dir: []const u8, r
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
 
-    const home_dir = try utils.getHomeDir(allocator);
+    const home_dir = try env_utils.getUserHomeDir(allocator);
     defer allocator.free(home_dir);
 
     const candidates = try officialInstallCandidates(allocator, env_map, home_dir);
