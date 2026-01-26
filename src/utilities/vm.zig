@@ -41,7 +41,7 @@ pub fn getInstalledVersions(allocator: mem.Allocator, bunv_install_dir: []const 
     return result;
 }
 
-pub fn detectProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 {
+pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 {
     const files = comptime [_]VersionFile{
         PackageJsonVersionFile.init(),
         BunVersionFile.init(),

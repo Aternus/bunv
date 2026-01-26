@@ -30,7 +30,7 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
 
     if (is_debug) std.debug.print("Bunv Install Dir: {s}\n", .{bunv_install_dir});
 
-    const project_version = try vm.detectProjectVersion(allocator, is_debug) orelse
+    const project_version = try vm.getProjectVersion(allocator, is_debug) orelse
         try vm.getLatestLocalVersion(allocator, is_debug, bunv_install_dir) orelse
         try vm.getLatestRemoteVersion(allocator, is_debug);
     defer allocator.free(project_version);
