@@ -181,7 +181,7 @@ pub fn getLatestLocalVersion(allocator: mem.Allocator, is_debug: bool, install_d
 }
 
 pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) ![]const u8 {
-    if (is_debug) std.debug.print("Getting latest remote version...\n", .{});
+    if (is_debug) std.debug.print("Figuring out the latest Bun version on the remote server...\n", .{});
 
     var client = http.Client{ .allocator = allocator };
     defer client.deinit();
@@ -207,6 +207,7 @@ pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) ![]const
     const reader = response.reader(&transfer_buffer);
     const body = try reader.allocRemaining(allocator, .limited(1024 * 1024 * 4));
     defer allocator.free(body);
+
     if (is_debug) std.debug.print("Latest release: {s}\n", .{body});
 
     const parsed = try json.parseFromSlice(std.json.Value, allocator, body, .{});
