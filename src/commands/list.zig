@@ -1,6 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
-const vm = @import("../vm.zig");
+const vm = @import("../utilities/vm.zig");
 const output = @import("../cli/output.zig");
 
 pub fn run(allocator: mem.Allocator, bunv_install_dir: []const u8) !void {

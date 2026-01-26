@@ -16,8 +16,8 @@ pub fn fatalFmt(comptime fmt: []const u8, args: anytype) noreturn {
 }
 
 pub fn errorMissingRemoveVersion() noreturn {
-    std.debug.print("{s}Error: 'rm' command requires a version argument{s}\n", .{ c.red, c.reset });
-    std.debug.print("Usage: bunv rm <version>\n", .{});
+    std.debug.print("{s}Error: 'remove' command requires a version argument{s}\n", .{ c.red, c.reset });
+    std.debug.print("Usage: bunv remove <version>\n", .{});
     std.process.exit(1);
 }
 
@@ -44,7 +44,19 @@ pub fn printInstalledVersions(allocator: mem.Allocator, bunv_install_dir: []cons
         return;
     }
     for (versions.items) |version| {
-        try printVersionDetails(allocator, bunv_install_dir, version);
+        const bun_version_dir = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
+        defer allocator.free(bun_version_dir);
+
+        const bun_bin_path = try fs_utils.getBunBinaryPath(allocator, bun_version_dir);
+        defer allocator.free(bun_bin_path);
+
+        const bun_global_packages_dir = try fs_utils.getBunGlobalPackagesDir(allocator, bunv_install_dir, version);
+        defer allocator.free(bun_global_packages_dir);
+
+        std.debug.print("  {s}{s}v{s}{s}\n", .{ c.bold, c.blue, version, c.reset });
+        std.debug.print("    {s}│ {s} Directory:        {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_version_dir, c.reset });
+        std.debug.print("    {s}│ {s} Bin:              {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_bin_path, c.reset });
+        std.debug.print("    {s}└─{s} Global Packages:  {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_global_packages_dir, c.reset });
     }
 }
 
@@ -54,20 +66,4 @@ pub fn printRemovingVersion(version: []const u8) void {
 
 pub fn printRemovedVersion(version: []const u8) void {
     std.debug.print("{s}✓{s} Successfully removed Bun v{s}\n", .{ c.green, c.reset, version });
-}
-
-fn printVersionDetails(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) !void {
-    const bun_dir_path = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
-    defer allocator.free(bun_dir_path);
-
-    const bun_bin_path = try fs_utils.getBunBinaryPath(allocator, bun_dir_path);
-    defer allocator.free(bun_bin_path);
-
-    const bun_global_packages_path = try fs_utils.getBunGlobalPackagesPath(allocator, bunv_install_dir, version);
-    defer allocator.free(bun_global_packages_path);
-
-    std.debug.print("  {s}{s}v{s}{s}\n", .{ c.bold, c.blue, version, c.reset });
-    std.debug.print("    {s}│ {s} Directory:        {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_dir_path, c.reset });
-    std.debug.print("    {s}│ {s} Bin:              {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_bin_path, c.reset });
-    std.debug.print("    {s}└─{s} Global Packages:  {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_global_packages_path, c.reset });
 }

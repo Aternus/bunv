@@ -2,7 +2,7 @@ const std = @import("std");
 const mem = std.mem;
 const env_utils = @import("../utilities/env.zig");
 const fs_utils = @import("../utilities/fs.zig");
-const vm = @import("../vm.zig");
+const vm = @import("../utilities/vm.zig");
 const c = @import("../utilities/colors.zig");
 
 pub const Options = struct {
@@ -24,7 +24,6 @@ const Item = struct {
     paths: std.array_list.Managed([]const u8),
     action: Action,
     warning: ?[]const u8,
-    safe_to_remove: bool,
 };
 
 const Report = struct {
@@ -117,7 +116,7 @@ fn scanAll(allocator: mem.Allocator, bunv_install_dir: []const u8) !Report {
 
 fn printReport(allocator: mem.Allocator, report: Report) !void {
     _ = allocator;
-    printSection(report.items, .bunv, "Bunv-managed installations", c.bold);
+    printSection(report.items, .bunv, "Bunv managed installations", c.bold);
     printSection(report.items, .official, "Official installer installations", c.bold);
     std.debug.print("\n", .{});
 }
@@ -143,12 +142,7 @@ fn printSection(items: []Item, source: Source, title: []const u8, color: []const
 }
 
 fn countActionable(items: []Item) usize {
-    var count: usize = 0;
-    for (items) |item| {
-        if (!item.safe_to_remove) continue;
-        count += 1;
-    }
-    return count;
+    return items.len;
 }
 
 fn confirmRemoval() !void {
@@ -183,7 +177,6 @@ fn executeActions(items: []Item) !void {
     var failed = false;
 
     for (items) |item| {
-        if (!item.safe_to_remove) continue;
         switch (item.action) {
             .delete_tree => |path| {
                 var item_failed = false;
@@ -222,7 +215,6 @@ fn findBunvInstalls(allocator: mem.Allocator, bunv_install_dir: []const u8, repo
             .paths = paths,
             .action = .{ .delete_tree = version_dir },
             .warning = null,
-            .safe_to_remove = true,
         };
         try report.append(item);
     }
@@ -267,7 +259,6 @@ fn findOfficialInstall(allocator: mem.Allocator, bunv_install_dir: []const u8, r
             .paths = paths,
             .action = .{ .delete_tree = try allocator.dupe(u8, install_dir) },
             .warning = warning,
-            .safe_to_remove = true,
         };
         try report.append(item);
     }

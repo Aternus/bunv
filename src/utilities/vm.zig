@@ -3,8 +3,8 @@ const os = std.os;
 const mem = std.mem;
 const json = std.json;
 const http = std.http;
-const fs_utils = @import("utilities/fs.zig");
-const c = @import("utilities/colors.zig");
+const fs_utils = @import("fs.zig");
+const c = @import("colors.zig");
 
 pub fn getInstalledVersions(allocator: mem.Allocator, bunv_install_dir: []const u8) !std.array_list.Managed([]const u8) {
     const versions_dir_path = try fs_utils.getBunvVersionsDir(allocator, bunv_install_dir);

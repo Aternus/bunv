@@ -96,6 +96,6 @@ pub fn getBunBinaryPath(allocator: mem.Allocator, install_dir: []const u8) ![]u8
     return try joinPath(allocator, &[_][]const u8{ install_dir, "bin", "bun" });
 }
 
-pub fn getBunGlobalPackagesPath(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) ![]u8 {
+pub fn getBunGlobalPackagesDir(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) ![]u8 {
     return try joinPath(allocator, &[_][]const u8{ bunv_install_dir, "versions", version, "install", "global" });
 }
