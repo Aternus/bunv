@@ -3,9 +3,10 @@ const mem = std.mem;
 const fs_utils = @import("../utilities/fs.zig");
 const vm = @import("../utilities/vm.zig");
 const output = @import("../cli/output.zig");
+const c = @import("../utilities/colors.zig");
 
-pub fn run(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) !void {
-    const installed_versions = try vm.getInstalledVersions(allocator, bunv_install_dir);
+pub fn run(allocator: mem.Allocator, install_dir: []const u8, version: []const u8) !void {
+    const installed_versions = try vm.getInstalledVersions(allocator, install_dir);
     defer {
         for (installed_versions.items) |item| {
             allocator.free(item);
@@ -25,14 +26,22 @@ pub fn run(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []co
         output.fatalFmt("Bun v{s} is not installed", .{version});
     }
 
-    const version_dir = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
+    const version_dir = try fs_utils.getBunVersionDir(allocator, install_dir, version);
     defer allocator.free(version_dir);
 
-    output.printRemovingVersion(version);
+    printRemovingVersion(version);
 
     fs_utils.deleteTreeAbsolute(version_dir) catch |err| {
         output.fatalFmt("Failed to remove Bun v{s}: {s}", .{ version, @errorName(err) });
     };
 
-    output.printRemovedVersion(version);
+    printRemovedVersion(version);
+}
+
+fn printRemovingVersion(version: []const u8) void {
+    std.debug.print("Removing Bun v{s}...\n", .{version});
+}
+
+fn printRemovedVersion(version: []const u8) void {
+    std.debug.print("{s}✓{s} Successfully removed Bun v{s}\n", .{ c.green, c.reset, version });
 }

@@ -57,10 +57,10 @@ const Report = struct {
     }
 };
 
-pub fn run(allocator: mem.Allocator, bunv_install_dir: []const u8, args: []const []const u8) !void {
+pub fn run(allocator: mem.Allocator, install_dir: []const u8, args: []const []const u8) !void {
     const options = try parseArgs(allocator, args);
 
-    var report = try scanAll(allocator, bunv_install_dir);
+    var report = try scanAll(allocator, install_dir);
     defer report.deinit(allocator);
 
     try printReport(allocator, report);
