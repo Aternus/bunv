@@ -145,13 +145,10 @@ pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 
             }
         }
 
-        // Move up to the parent directory
-        const parent_dir = fs_utils.dirname(current_dir);
-        if (parent_dir == null or mem.eql(u8, parent_dir.?, current_dir)) {
-            // We've reached the root directory, stop searching
-            break;
-        }
-        const new_dir = try fs_utils.joinPath(allocator, &[_][]const u8{parent_dir.?});
+        const parent_dir = fs_utils.dirname(current_dir) orelse break;
+        if (mem.eql(u8, parent_dir, current_dir)) break;
+
+        const new_dir = try allocator.dupe(u8, parent_dir);
         allocator.free(current_dir);
         current_dir = new_dir;
     }
