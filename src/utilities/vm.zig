@@ -150,12 +150,12 @@ pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) ![]const
 }
 
 pub fn ensureVersionDownloaded(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) !void {
-    const version_path = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
-    defer allocator.free(version_path);
+    const bun_dir = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
+    defer allocator.free(bun_dir);
 
-    const bin = try fs_utils.getBunBinaryPath(allocator, version_path);
-    defer allocator.free(bin);
-    if (try fs_utils.fileExists(bin)) {
+    const bin_path = try fs_utils.getBunBinaryPath(allocator, bun_dir);
+    defer allocator.free(bin_path);
+    if (try fs_utils.fileExists(bin_path)) {
         return;
     }
 
@@ -194,7 +194,7 @@ pub fn ensureVersionDownloaded(allocator: mem.Allocator, bunv_install_dir: []con
     var env = try std.process.getEnvMap(allocator);
     defer env.deinit();
 
-    try env.put("BUN_INSTALL", version_path);
+    try env.put("BUN_INSTALL", bun_dir);
 
     const version_arg = try std.fmt.allocPrint(
         allocator,
