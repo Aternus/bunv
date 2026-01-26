@@ -511,7 +511,6 @@ fn printSection(items: []Item, source: Source, title: []const u8, color: []const
         for (item.paths.items) |path| {
             std.debug.print("    {s}•{s} {s}\n", .{ c.grey, c.reset, path });
         }
-        _ = item.action;
         if (item.warning) |warning| {
             std.debug.print("    {s}Warning:{s} {s}\n", .{ c.yellow, c.reset, warning });
         }

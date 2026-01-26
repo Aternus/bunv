@@ -94,7 +94,7 @@ Installing...
 ✓ Done! Bun v1.3.6 is installed
 ```
 
-Bunv also ships its own executable: `bunv`. Right now, it has 4 commands:
+Bunv also ships its own executable: `bunv`. Currently, it has 4 commands:
 
 1. List installed versions:
    ```sh
