@@ -1,7 +1,7 @@
 # Bunv
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/aklinker1/bunv/blob/main/LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/aklinker1/bunv?style=social)](https://github.com/aklinker1/bunv)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/Aternus/bunv/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/Aternus/bunv?style=social)](https://github.com/Aternus/bunv)
 
 Bunv makes Bun versioning effortless.
 
@@ -11,7 +11,7 @@ correct, reproducible, and fast with near‑zero overhead (see [Benchmark](#benc
 ## Quick Start
 
 ```sh
-curl -sL https://raw.githubusercontent.com/aklinker1/bunv/main/install.sh | sh
+curl -sL https://raw.githubusercontent.com/Aternus/bunv/main/install.sh | sh
 export PATH="$HOME/.bunv/bin:$PATH"
 which bun
 ```
@@ -26,10 +26,7 @@ bunx oxlint@latest
 
 - Automatic version selection for `bun` and `bunx`
 - Manage installed versions with `bunv`
-- Read the project version from multiple files:
-    - `package.json`'s `packageManager` field (just like Corepack)
-    - `.bun-version`
-    - `.tool-versions`
+- Read the Bun version from `package.json`'s `packageManager` field, `.bun-version`, or `.tool-versions`
 
 ## How Bunv Chooses a Version
 
@@ -56,7 +53,7 @@ brew install simnalamburt/x/bunv
 1. Uninstall [`bun`](https://bun.sh/docs/installation#uninstall) and remove `~/.bun/bin` from your path
 2. Run installer:
    ```sh
-   curl -sL https://raw.githubusercontent.com/aklinker1/bunv/main/install.sh | sh
+   curl -sL https://raw.githubusercontent.com/Aternus/bunv/main/install.sh | sh
    ```
 3. Add `~/.bunv/bin` to your `PATH`
    ```sh
@@ -67,7 +64,7 @@ brew install simnalamburt/x/bunv
 ### Build from Source
 
 1. Uninstall [`bun`](https://bun.sh/docs/installation#uninstall) and remove `~/.bun/bin` from your path
-2. Install [Zig](https://ziglang.org/)
+2. Install [Zig](https://ziglang.org/) (>= 0.15.2)
 3. Build the executables (`bun`, `bunx`, `bunv`)
    ```sh
    zig build -Doptimize=ReleaseFast --prefix ~/.bunv
@@ -97,7 +94,7 @@ Installing...
 ✓ Done! Bun v1.3.6 is installed
 ```
 
-Bunv also ships its own executable: `bunv`. Right now, it has 2 commands:
+Bunv also ships its own executable: `bunv`. Currently, it has 4 commands:
 
 1. List installed versions:
    ```sh
@@ -116,8 +113,16 @@ Bunv also ships its own executable: `bunv`. Right now, it has 2 commands:
 2. Remove an installed version:
    ```sh
    bunv rm 1.1.26
-   # or just delete the directory
-   rm -rf ~/.bunv/versions/1.1.26
+   ```
+3. Remove Bun installations found on this machine:
+   ```sh
+   bunv prune
+   # or skip confirmation
+   bunv prune --yes
+   ```
+4. Show help:
+   ```sh
+   bunv help
    ```
 
 If you're not in a project, Bunv will use the newest version installed locally, or if there is none, it will download
@@ -217,6 +222,11 @@ Modified args: { ~/.bunv/versions/1.3.6/bin/bun, --version }
 1.3.6
 ```
 
+## Environment Variables
+
+- `BUNV_AUTO_INSTALL=1` to auto-install missing versions without prompting (useful in non-interactive shells).
+- `BUNV_INSTALL` to change the base install directory (defaults to `~/.bunv`).
+
 ## Troubleshooting
 
 - `which bun` doesn't show `~/.bunv/bin/bun`: ensure `~/.bunv/bin` is at the front of your `PATH`.
@@ -241,12 +251,12 @@ $ ./zig-out/bin/bunx --version
 $ ./zig-out/bin/bunv help
 
 # Build and install production executables to ~/.bunv/bin
-$ zig build --release=fast --prefix ~/.bunv
+$ zig build -Doptimize=ReleaseFast --prefix ~/.bunv
 ```
 
 ## Release
 
-To create a release, run the ["Release" action](https://github.com/aklinker1/bunv/actions/workflows/release.yml).
+To create a release, run the ["Release" action](https://github.com/Aternus/bunv/actions/workflows/release.yml).
 
 This project uses conventional commits, so the release workflow will bump the version and create the GitHub release
 automatically.

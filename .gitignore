@@ -281,7 +281,7 @@ Temporary Items
 .apdisk
 
 # CUSTOM
+.zbscanhelper.zig
 .envrc
+.dev/
 package-lock.json
-plans/
-prs/

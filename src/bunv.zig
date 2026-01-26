@@ -6,6 +6,7 @@ const vm = @import("vm.zig");
 const builtin = @import("builtin");
 const config = @import("config");
 const c = @import("colors.zig");
+const prune = @import("prune.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -43,6 +44,8 @@ pub fn main() !void {
             }
             const version = args[2];
             try removeVersion(allocator, config_dir, version);
+        } else if (mem.eql(u8, command, "prune")) {
+            try prune.run(allocator, config_dir, args[2..]);
         } else {
             std.debug.print("{s}Error: Unknown command '{s}'{s}\n", .{ c.red, command, c.reset });
             std.debug.print("Run 'bunv help' for usage information\n", .{});
@@ -87,10 +90,11 @@ fn printInstalledVersions(allocator: mem.Allocator, config_dir: []const u8, vers
 }
 
 fn printHelp() !void {
-    std.debug.print("\n{s}{s}Bunv{s} - Manage installed versions of Bun {s}({f}){s}\n\n", .{ c.bold, c.blue, c.reset, c.dim, config.version, c.reset });
+    std.debug.print("\n{s}{s}Bunv{s} - The Bun version manager {s}({f}){s}\n\n", .{ c.bold, c.blue, c.reset, c.dim, config.version, c.reset });
     std.debug.print("{s}Commands:{s}\n", .{ c.bold, c.reset });
     std.debug.print("                List installed Bun versions\n", .{});
     std.debug.print("  {s}{s}rm{s} {s}<version>{s}  Remove an installed Bun version\n", .{ c.bold, c.yellow, c.reset, c.dim, c.reset });
+    std.debug.print("  {s}{s}prune{s}         Remove Bun installations found on this machine\n", .{ c.bold, c.yellow, c.reset });
     std.debug.print("  {s}{s}help{s}          Show this help message\n", .{ c.bold, c.cyan, c.reset });
     std.debug.print("\n", .{});
 }

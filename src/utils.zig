@@ -20,7 +20,7 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
 
     if (cmd == .bun and args.len > 1 and mem.eql(u8, args[1], "upgrade")) {
         std.debug.print("bun upgrade is a no-op under bunv. Update your version file instead.\n", .{});
-        std.debug.print("See: https://github.com/aklinker1/bunv#upgrading-bun\n", .{});
+        std.debug.print("See: https://github.com/Aternus/bunv#upgrading-bun\n", .{});
         std.process.exit(0);
     }
 
@@ -61,7 +61,11 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
         try new_args.append(arg);
     }
 
-    if (is_debug) std.debug.print("Original args: {any}\nModified args: {any}\n---\n", .{ args, new_args.items });
+    if (is_debug) {
+        printArgs("Original args", args);
+        printArgs("Modified args", new_args.items);
+        std.debug.print("---\n", .{});
+    }
 
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
@@ -72,8 +76,25 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
     return runBunCmd(allocator, new_args.items, &env_map);
 }
 
+fn printArgs(label: []const u8, args: anytype) void {
+    std.debug.print("{s}: {{ ", .{label});
+    for (args, 0..) |arg, index| {
+        if (index != 0) std.debug.print(", ", .{});
+        std.debug.print("{s}", .{argToSlice(arg)});
+    }
+    std.debug.print(" }}\n", .{});
+}
+
+fn argToSlice(arg: anytype) []const u8 {
+    return switch (@TypeOf(arg)) {
+        [:0]const u8, [:0]u8 => mem.sliceTo(arg, 0),
+        []const u8 => arg,
+        else => @compileError("Unsupported argument type for printArgs"),
+    };
+}
+
 /// Grab the user's home directory
-fn getHomeDir(allocator: mem.Allocator) ![]const u8 {
+pub fn getHomeDir(allocator: mem.Allocator) ![]const u8 {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
 

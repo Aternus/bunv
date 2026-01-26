@@ -43,9 +43,9 @@ esac
 
 # Set the download URL
 if [ -n "$TAG" ]; then
-    DOWNLOAD_URL="https://github.com/aklinker1/bunv/releases/download/$TAG/bunv-$OS-$ARCH.zip"
+    DOWNLOAD_URL="https://github.com/Aternus/bunv/releases/download/$TAG/bunv-$OS-$ARCH.zip"
 else
-    DOWNLOAD_URL="https://github.com/aklinker1/bunv/releases/latest/download/bunv-$OS-$ARCH.zip"
+    DOWNLOAD_URL="https://github.com/Aternus/bunv/releases/latest/download/bunv-$OS-$ARCH.zip"
 fi
 
 # Create temporary directory
