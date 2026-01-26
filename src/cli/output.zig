@@ -16,7 +16,7 @@ pub fn fatalFmt(comptime fmt: []const u8, args: anytype) noreturn {
     std.process.exit(1);
 }
 
-pub fn errorMissingRmVersion() noreturn {
+pub fn errorMissingRemoveVersion() noreturn {
     std.debug.print("{s}Error: 'rm' command requires a version argument{s}\n", .{ c.red, c.reset });
     std.debug.print("Usage: bunv rm <version>\n", .{});
     std.process.exit(1);
@@ -31,10 +31,10 @@ pub fn errorUnknownCommand(command: []const u8) noreturn {
 pub fn printHelp() void {
     std.debug.print("\n{s}{s}Bunv{s} - The Bun version manager {s}({f}){s}\n\n", .{ c.bold, c.blue, c.reset, c.dim, config.version, c.reset });
     std.debug.print("{s}Commands:{s}\n", .{ c.bold, c.reset });
-    std.debug.print("                List installed Bun versions\n", .{});
-    std.debug.print("  {s}{s}rm{s} {s}<version>{s}  Remove an installed Bun version\n", .{ c.bold, c.yellow, c.reset, c.dim, c.reset });
-    std.debug.print("  {s}{s}prune{s}         Remove Bun installations found on this machine\n", .{ c.bold, c.yellow, c.reset });
-    std.debug.print("  {s}{s}help{s}          Show this help message\n", .{ c.bold, c.cyan, c.reset });
+    std.debug.print("                    List installed Bun versions\n", .{});
+    std.debug.print("  {s}{s}remove{s} {s}<version>{s}  Remove an installed Bun version\n", .{ c.bold, c.yellow, c.reset, c.dim, c.reset });
+    std.debug.print("  {s}{s}prune{s}             Remove Bun installations found on this machine\n", .{ c.bold, c.yellow, c.reset });
+    std.debug.print("  {s}{s}help{s}              Show this help message\n", .{ c.bold, c.cyan, c.reset });
     std.debug.print("\n", .{});
 }
 
@@ -68,7 +68,7 @@ fn printVersionDetails(allocator: mem.Allocator, bunv_install_dir: []const u8, v
     defer allocator.free(bun_global_packages_path);
 
     std.debug.print("  {s}{s}v{s}{s}\n", .{ c.bold, c.blue, version, c.reset });
-    std.debug.print("    {s}│ {s} Directory:       {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_dir_path, c.reset });
-    std.debug.print("    {s}│ {s} Bin:             {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_bin_path, c.reset });
-    std.debug.print("    {s}└─{s} Global Packages: {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_global_packages_path, c.reset });
+    std.debug.print("    {s}│ {s} Directory:        {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_dir_path, c.reset });
+    std.debug.print("    {s}│ {s} Bin:              {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_bin_path, c.reset });
+    std.debug.print("    {s}└─{s} Global Packages:  {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_global_packages_path, c.reset });
 }

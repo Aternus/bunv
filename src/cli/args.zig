@@ -4,9 +4,9 @@ const output = @import("output.zig");
 
 pub const Command = enum {
     list,
-    help,
-    rm,
+    remove,
     prune,
+    help,
 };
 
 pub const ParsedArgs = struct {
@@ -21,19 +21,20 @@ pub fn parseArgs(args: []const []const u8) ParsedArgs {
     }
 
     const command = args[1];
-    if (mem.eql(u8, command, "help") or mem.eql(u8, command, "--help") or mem.eql(u8, command, "-h")) {
-        return .{ .command = .help };
-    }
 
-    if (mem.eql(u8, command, "rm")) {
+    if (mem.eql(u8, command, "remove") or mem.eql(u8, command, "rm")) {
         if (args.len < 3) {
-            output.errorMissingRmVersion();
+            output.errorMissingRemoveVersion();
         }
-        return .{ .command = .rm, .version = args[2] };
+        return .{ .command = .remove, .version = args[2] };
     }
 
     if (mem.eql(u8, command, "prune")) {
         return .{ .command = .prune, .prune_args = args[2..] };
+    }
+
+    if (mem.eql(u8, command, "help") or mem.eql(u8, command, "--help") or mem.eql(u8, command, "-h")) {
+        return .{ .command = .help };
     }
 
     output.errorUnknownCommand(command);
