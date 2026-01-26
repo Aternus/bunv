@@ -68,7 +68,7 @@ fn printVersionDetails(allocator: mem.Allocator, bunv_install_dir: []const u8, v
     defer allocator.free(bun_global_packages_path);
 
     std.debug.print("  {s}{s}v{s}{s}\n", .{ c.bold, c.blue, version, c.reset });
-    std.debug.print("    {s}│ {s} Directory: {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_dir_path, c.reset });
-    std.debug.print("    {s}│ {s} Global:    {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_global_packages_path, c.reset });
-    std.debug.print("    {s}└─{s} Bin:       {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_bin_path, c.reset });
+    std.debug.print("    {s}│ {s} Directory:       {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_dir_path, c.reset });
+    std.debug.print("    {s}│ {s} Bin:             {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_bin_path, c.reset });
+    std.debug.print("    {s}└─{s} Global Packages: {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, bun_global_packages_path, c.reset });
 }

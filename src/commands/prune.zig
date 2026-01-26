@@ -472,30 +472,14 @@ fn findUnknownPathBuns(allocator: mem.Allocator, report: *Report) !void {
 }
 
 fn printReport(allocator: mem.Allocator, report: Report) !void {
-    try printBunvSection(allocator, report.items.items);
+    _ = allocator;
+    printSection(report.items.items, .bunv, "Bunv managed installations", c.bold);
     printSection(report.items.items, .official, "Official installer installations", c.bold);
     printSection(report.items.items, .brew, "Homebrew installations", c.bold);
     printSection(report.items.items, .linux_pkg, "Linux package manager installations", c.bold);
     printSection(report.items.items, .windows_pkg, "Windows package manager installations", c.bold);
     printSection(report.items.items, .unknown, "Unknown / unmanaged installations", c.bold);
     std.debug.print("\n", .{});
-}
-
-fn printBunvSection(allocator: mem.Allocator, items: []Item) !void {
-    _ = allocator;
-    var count: usize = 0;
-    for (items) |item| {
-        if (item.source == .bunv) count += 1;
-    }
-    if (count == 0) return;
-
-    std.debug.print("{s}Bunv managed installations:{s}\n", .{ c.bold, c.reset });
-    for (items) |item| {
-        if (item.source != .bunv) continue;
-        const version_dir = item.paths.items[0];
-        std.debug.print("  {s}{s}{s}\n", .{ c.bold, c.blue, item.label });
-        std.debug.print("    {s}└─{s} Directory: {s}{s}{s}\n", .{ c.grey, c.reset, c.cyan, version_dir, c.reset });
-    }
 }
 
 fn printSection(items: []Item, source: Source, title: []const u8, color: []const u8) void {
@@ -508,9 +492,9 @@ fn printSection(items: []Item, source: Source, title: []const u8, color: []const
     std.debug.print("{s}{s}:{s}\n", .{ color, title, c.reset });
     for (items) |item| {
         if (item.source != source) continue;
-        std.debug.print("  {s}- {s}{s}\n", .{ c.blue, item.label, c.reset });
+        std.debug.print("  {s}{s}{s}\n", .{ c.blue, item.label, c.reset });
         for (item.paths.items) |path| {
-            std.debug.print("    {s}•{s} {s}\n", .{ c.grey, c.reset, path });
+            std.debug.print("    {s}\n", .{path});
         }
         if (item.warning) |warning| {
             std.debug.print("    {s}Warning:{s} {s}\n", .{ c.yellow, c.reset, warning });
