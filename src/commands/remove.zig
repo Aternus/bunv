@@ -3,8 +3,8 @@ const mem = std.mem;
 const vm = @import("../vm.zig");
 const output = @import("../cli/output.zig");
 
-pub fn run(allocator: mem.Allocator, config_dir: []const u8, version: []const u8) !void {
-    const installed_versions = try vm.getInstalledVersions(allocator, config_dir);
+pub fn run(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) !void {
+    const installed_versions = try vm.getInstalledVersions(allocator, bunv_install_dir);
     defer {
         for (installed_versions.items) |item| {
             allocator.free(item);
@@ -24,7 +24,7 @@ pub fn run(allocator: mem.Allocator, config_dir: []const u8, version: []const u8
         output.fatalFmt("Bun v{s} is not installed", .{version});
     }
 
-    const version_dir = try vm.getVersionDir(allocator, config_dir, version);
+    const version_dir = try vm.getVersionDir(allocator, bunv_install_dir, version);
     defer allocator.free(version_dir);
 
     output.printRemovingVersion(version);

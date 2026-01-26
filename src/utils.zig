@@ -24,23 +24,23 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
         std.process.exit(0);
     }
 
-    const config_dir = try getConfigDir(allocator, is_debug);
-    defer allocator.free(config_dir);
+    const bunv_install_dir = try getBunvInstallDir(allocator, is_debug);
+    defer allocator.free(bunv_install_dir);
 
-    if (is_debug) std.debug.print("Config Dir: {s}\n", .{config_dir});
+    if (is_debug) std.debug.print("Config Dir: {s}\n", .{bunv_install_dir});
 
-    const project_version = try vm.detectProjectVersion(allocator, is_debug) orelse try vm.getLatestLocalVersion(allocator, is_debug, config_dir) orelse try vm.getLatestRemoteVersion(allocator, is_debug);
+    const project_version = try vm.detectProjectVersion(allocator, is_debug) orelse try vm.getLatestLocalVersion(allocator, is_debug, bunv_install_dir) orelse try vm.getLatestRemoteVersion(allocator, is_debug);
     defer allocator.free(project_version);
 
-    try vm.ensureVersionDownloaded(allocator, config_dir, project_version);
+    try vm.ensureVersionDownloaded(allocator, bunv_install_dir, project_version);
 
     // Run bun command
 
-    const bin = try fs.path.join(allocator, &[_][]const u8{ config_dir, "versions", project_version, "bin", "bun" });
+    const bin = try fs.path.join(allocator, &[_][]const u8{ bunv_install_dir, "versions", project_version, "bin", "bun" });
     defer allocator.free(bin);
 
     const global_install_dir = try fs.path.join(allocator, &[_][]const u8{
-        config_dir,
+        bunv_install_dir,
         "versions",
         project_version,
         "install",
@@ -48,7 +48,7 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
     });
     defer allocator.free(global_install_dir);
 
-    const global_bin_dir = try fs.path.join(allocator, &[_][]const u8{ config_dir, "versions", project_version, "bin" });
+    const global_bin_dir = try fs.path.join(allocator, &[_][]const u8{ bunv_install_dir, "versions", project_version, "bin" });
     defer allocator.free(global_bin_dir);
 
     var new_args = try std.array_list.Managed([]const u8).initCapacity(allocator, 5);
@@ -108,7 +108,7 @@ pub fn getHomeDir(allocator: mem.Allocator) ![]const u8 {
 }
 
 /// Grab the BUNV_INSTALL environment variable or use ".bunv", and resolve relative to the home directory
-pub fn getConfigDir(allocator: mem.Allocator, is_debug: bool) ![]const u8 {
+pub fn getBunvInstallDir(allocator: mem.Allocator, is_debug: bool) ![]const u8 {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
 
@@ -119,11 +119,11 @@ pub fn getConfigDir(allocator: mem.Allocator, is_debug: bool) ![]const u8 {
 
     if (is_debug) std.debug.print("Home Dir: {s}\n", .{home_dir});
 
-    const config_dir = try fs.path.join(allocator, &[_][]const u8{ home_dir, bunv_install });
+    const bunv_install_dir = try fs.path.join(allocator, &[_][]const u8{ home_dir, bunv_install });
 
-    if (is_debug) std.debug.print("Config Dir: {s}\n", .{config_dir});
+    if (is_debug) std.debug.print("Config Dir: {s}\n", .{bunv_install_dir});
 
-    return config_dir;
+    return bunv_install_dir;
 }
 
 /// Check to see if the DEBUG environment variable is set to "bunv"

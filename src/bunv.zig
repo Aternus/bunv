@@ -18,12 +18,12 @@ pub fn main() !void {
         std.debug.print("Architecture: {s}\n", .{@tagName(builtin.cpu.arch)});
     }
 
-    const config_dir = try utils.getConfigDir(allocator, is_debug);
-    defer allocator.free(config_dir);
+    const bunv_install_dir = try utils.getBunvInstallDir(allocator, is_debug);
+    defer allocator.free(bunv_install_dir);
 
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
     const parsed = cli_args.parseArgs(args);
-    try commands.dispatch(allocator, config_dir, parsed);
+    try commands.dispatch(allocator, bunv_install_dir, parsed);
 }

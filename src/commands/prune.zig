@@ -79,10 +79,10 @@ const Report = struct {
     }
 };
 
-pub fn run(allocator: mem.Allocator, config_dir: []const u8, args: []const []const u8) !void {
+pub fn run(allocator: mem.Allocator, bunv_install_dir: []const u8, args: []const []const u8) !void {
     const options = try parseArgs(allocator, args);
 
-    var report = try scanAll(allocator, config_dir, options);
+    var report = try scanAll(allocator, bunv_install_dir, options);
     defer report.deinit(allocator);
 
     try printReport(allocator, report);
@@ -126,13 +126,13 @@ fn printHelp() void {
     std.debug.print("  --yes, -y    Skip confirmation prompt\n\n", .{});
 }
 
-fn scanAll(allocator: mem.Allocator, config_dir: []const u8, options: Options) !Report {
+fn scanAll(allocator: mem.Allocator, bunv_install_dir: []const u8, options: Options) !Report {
     var report = Report.init(allocator);
     errdefer report.deinit(allocator);
 
-    try findBunvInstalls(allocator, config_dir, &report);
-    try addBunvShimBin(allocator, config_dir, &report);
-    try findOfficialInstall(allocator, config_dir, &report);
+    try findBunvInstalls(allocator, bunv_install_dir, &report);
+    try addBunvShimBin(allocator, bunv_install_dir, &report);
+    try findOfficialInstall(allocator, bunv_install_dir, &report);
 
     switch (builtin.os.tag) {
         .macos => try findBrewInstall(allocator, &report, options),
@@ -146,17 +146,17 @@ fn scanAll(allocator: mem.Allocator, config_dir: []const u8, options: Options) !
     return report;
 }
 
-fn findBunvInstalls(allocator: mem.Allocator, config_dir: []const u8, report: *Report) !void {
-    const installed_versions = try vm.getInstalledVersions(allocator, config_dir);
+fn findBunvInstalls(allocator: mem.Allocator, bunv_install_dir: []const u8, report: *Report) !void {
+    const installed_versions = try vm.getInstalledVersions(allocator, bunv_install_dir);
     defer {
         for (installed_versions.items) |item| allocator.free(item);
         installed_versions.deinit();
     }
 
     for (installed_versions.items) |version| {
-        const version_dir = try vm.getVersionDir(allocator, config_dir, version);
+        const version_dir = try vm.getVersionDir(allocator, bunv_install_dir, version);
         errdefer allocator.free(version_dir);
-        const bin = try vm.getBinPath(allocator, config_dir, version);
+        const bin = try vm.getBinPath(allocator, bunv_install_dir, version);
         errdefer allocator.free(bin);
 
         var paths = std.array_list.Managed([]const u8).init(allocator);
@@ -178,9 +178,9 @@ fn findBunvInstalls(allocator: mem.Allocator, config_dir: []const u8, report: *R
     }
 }
 
-fn addBunvShimBin(allocator: mem.Allocator, config_dir: []const u8, report: *Report) !void {
+fn addBunvShimBin(allocator: mem.Allocator, bunv_install_dir: []const u8, report: *Report) !void {
     const bun_name = if (builtin.os.tag == .windows) "bun.exe" else "bun";
-    const shim_bin = try fs.path.join(allocator, &[_][]const u8{ config_dir, "bin", bun_name });
+    const shim_bin = try fs.path.join(allocator, &[_][]const u8{ bunv_install_dir, "bin", bun_name });
     defer allocator.free(shim_bin);
 
     if (pathExists(shim_bin)) {
@@ -188,7 +188,7 @@ fn addBunvShimBin(allocator: mem.Allocator, config_dir: []const u8, report: *Rep
     }
 }
 
-fn findOfficialInstall(allocator: mem.Allocator, config_dir: []const u8, report: *Report) !void {
+fn findOfficialInstall(allocator: mem.Allocator, bunv_install_dir: []const u8, report: *Report) !void {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
 
@@ -202,7 +202,7 @@ fn findOfficialInstall(allocator: mem.Allocator, config_dir: []const u8, report:
     }
 
     for (candidates.items) |install_dir| {
-        if (mem.startsWith(u8, install_dir, config_dir)) continue;
+        if (mem.startsWith(u8, install_dir, bunv_install_dir)) continue;
 
         const bin = try bunBinaryPath(allocator, install_dir);
         defer allocator.free(bin);

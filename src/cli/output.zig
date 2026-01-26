@@ -38,14 +38,14 @@ pub fn printHelp() void {
     std.debug.print("\n", .{});
 }
 
-pub fn printInstalledVersions(allocator: mem.Allocator, config_dir: []const u8, versions: std.array_list.Managed([]const u8)) !void {
+pub fn printInstalledVersions(allocator: mem.Allocator, bunv_install_dir: []const u8, versions: std.array_list.Managed([]const u8)) !void {
     std.debug.print("{s}Installed versions:{s}\n", .{ c.bold, c.reset });
     if (versions.items.len == 0) {
         std.debug.print("  {s}No versions installed{s}\n", .{ c.yellow, c.reset });
         return;
     }
     for (versions.items) |version| {
-        try printVersionDetails(allocator, config_dir, version);
+        try printVersionDetails(allocator, bunv_install_dir, version);
     }
 }
 
@@ -57,14 +57,14 @@ pub fn printRemovedVersion(version: []const u8) void {
     std.debug.print("{s}✓{s} Successfully removed Bun v{s}\n", .{ c.green, c.reset, version });
 }
 
-fn printVersionDetails(allocator: mem.Allocator, config_dir: []const u8, version: []const u8) !void {
-    const directory = try vm.getVersionDir(allocator, config_dir, version);
+fn printVersionDetails(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) !void {
+    const directory = try vm.getVersionDir(allocator, bunv_install_dir, version);
     defer allocator.free(directory);
 
-    const bin = try vm.getBinPath(allocator, config_dir, version);
+    const bin = try vm.getBinPath(allocator, bunv_install_dir, version);
     defer allocator.free(bin);
 
-    const global_dir = try fs.path.join(allocator, &[_][]const u8{ config_dir, "versions", version, "install", "global" });
+    const global_dir = try fs.path.join(allocator, &[_][]const u8{ bunv_install_dir, "versions", version, "install", "global" });
     defer allocator.free(global_dir);
 
     std.debug.print("  {s}{s}v{s}{s}\n", .{ c.bold, c.blue, version, c.reset });
