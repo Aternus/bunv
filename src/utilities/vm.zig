@@ -222,12 +222,13 @@ pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) ![]const
     return allocator.dupe(u8, tag);
 }
 
-pub fn ensureVersionDownloaded(allocator: mem.Allocator, install_dir: []const u8, version: []const u8) !void {
-    const bun_dir = try fs_utils.getBunVersionDir(allocator, install_dir, version);
-    defer allocator.free(bun_dir);
+pub fn downloadVersion(allocator: mem.Allocator, install_dir: []const u8, version: []const u8) !void {
+    const version_dir = try fs_utils.getBunVersionDir(allocator, install_dir, version);
+    defer allocator.free(version_dir);
 
-    const bin_path = try fs_utils.getBunBinaryPath(allocator, bun_dir);
+    const bin_path = try fs_utils.getBunBinaryPath(allocator, version_dir);
     defer allocator.free(bin_path);
+
     if (try fs_utils.fileExists(bin_path)) {
         return;
     }
@@ -236,7 +237,6 @@ pub fn ensureVersionDownloaded(allocator: mem.Allocator, install_dir: []const u8
 
     std.debug.print("Installing...\n", .{});
 
-    // Ensure the config directory exists before proceeding
     try fs_utils.ensureDirAbsolute(install_dir);
 
     const install_script_path = try fs_utils.joinPath(allocator, &[_][]const u8{ install_dir, "install.sh" });
@@ -267,7 +267,7 @@ pub fn ensureVersionDownloaded(allocator: mem.Allocator, install_dir: []const u8
     var env = try std.process.getEnvMap(allocator);
     defer env.deinit();
 
-    try env.put("BUN_INSTALL", bun_dir);
+    try env.put("BUN_INSTALL", version_dir);
 
     const version_arg = try std.fmt.allocPrint(
         allocator,
