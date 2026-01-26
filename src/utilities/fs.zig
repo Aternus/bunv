@@ -4,6 +4,14 @@ const mem = std.mem;
 
 const env_utils = @import("env.zig");
 
+pub fn isFileExists(file: []u8) !bool {
+    std.fs.accessAbsolute(file, .{}) catch |err| switch (err) {
+        error.FileNotFound => return false,
+        else => |e| return e,
+    };
+    return true;
+}
+
 pub fn getBunvInstallDir(allocator: mem.Allocator, is_debug: bool) ![]const u8 {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
@@ -20,14 +28,6 @@ pub fn getBunvInstallDir(allocator: mem.Allocator, is_debug: bool) ![]const u8 {
     if (is_debug) std.debug.print("Bunv Install Dir: {s}\n", .{bunv_install_dir});
 
     return bunv_install_dir;
-}
-
-pub fn isFileExists(file: []u8) !bool {
-    std.fs.accessAbsolute(file, .{}) catch |err| switch (err) {
-        error.FileNotFound => return false,
-        else => |e| return e,
-    };
-    return true;
 }
 
 pub fn getBunvVersionsDir(allocator: mem.Allocator, bunv_install_dir: []const u8) ![]u8 {
