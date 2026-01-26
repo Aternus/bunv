@@ -113,6 +113,8 @@ pub fn getInstalledVersions(allocator: mem.Allocator, install_dir: []const u8) !
 }
 
 pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 {
+    if (is_debug) std.debug.print("Figuring out the Bun version required for the project...\n");
+
     const files = comptime [_]VersionFile{
         PackageJsonVersionFile.init(),
         BunVersionFile.init(),
@@ -157,16 +159,17 @@ pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 
 }
 
 pub fn getLatestLocalVersion(allocator: mem.Allocator, is_debug: bool, install_dir: []const u8) !?[]const u8 {
-    if (is_debug) std.debug.print("Getting latest local version...\n", .{});
+    if (is_debug) std.debug.print("Figuring out the latest Bun version installed locally...\n");
 
     const installed_versions = try getInstalledVersions(allocator, install_dir);
-    if (is_debug) std.debug.print("{d} versions: {any}\n", .{ installed_versions.items.len, installed_versions.items });
     defer {
         for (installed_versions.items) |item| {
             allocator.free(item);
         }
         installed_versions.deinit();
     }
+
+    if (is_debug) std.debug.print("{d} versions: {any}\n", .{ installed_versions.items.len, installed_versions.items });
 
     if (installed_versions.items.len == 0) {
         return null;
