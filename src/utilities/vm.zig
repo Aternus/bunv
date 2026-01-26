@@ -6,8 +6,79 @@ const http = std.http;
 const fs_utils = @import("fs.zig");
 const c = @import("colors.zig");
 
-pub fn getInstalledVersions(allocator: mem.Allocator, bunv_install_dir: []const u8) !std.array_list.Managed([]const u8) {
-    const versions_dir_path = try fs_utils.getBunvVersionsDir(allocator, bunv_install_dir);
+const VersionFile = struct {
+    name: []const u8,
+    extractBunVersion: *const fn (allocator: mem.Allocator, contents: []u8) ?[]const u8,
+};
+
+const PackageJsonVersionFile = struct {
+    fn init() VersionFile {
+        return .{
+            .name = "package.json",
+            .extractBunVersion = &extractBunVersion,
+        };
+    }
+    fn extractBunVersion(allocator: mem.Allocator, contents: []u8) ?[]const u8 {
+        const parsed = json.parseFromSlice(std.json.Value, allocator, contents, .{}) catch |err| switch (err) {
+            else => return null,
+        };
+        defer parsed.deinit();
+
+        // "bun@X.Y.Z"
+        if (parsed.value.object.get("packageManager")) |package_manager| {
+            const str = package_manager.string;
+            if (mem.eql(u8, str[0..4], "bun@")) {
+                return allocator.dupe(u8, str[4..]) catch return null;
+            }
+        }
+        return null;
+    }
+};
+
+const BunVersionFile = struct {
+    fn init() VersionFile {
+        return .{
+            .name = ".bun-version",
+            .extractBunVersion = &extractBunVersion,
+        };
+    }
+    fn extractBunVersion(allocator: mem.Allocator, contents: []u8) ?[]u8 {
+        return allocator.dupe(u8, mem.trim(u8, contents, &std.ascii.whitespace)) catch |err| switch (err) {
+            else => return null,
+        };
+    }
+};
+
+const ToolVersionsFile = struct {
+    fn init() VersionFile {
+        return .{
+            .name = ".tool-versions",
+            .extractBunVersion = &extractBunVersion,
+        };
+    }
+    fn extractBunVersion(allocator: mem.Allocator, contents: []u8) ?[]u8 {
+        var lines_it = mem.splitScalar(u8, contents, '\n');
+        while (lines_it.next()) |line| {
+            // Skip empty lines and comments
+            if (line.len == 0 or line[0] == '#') {
+                continue;
+            }
+
+            // Check if line starts with "bun "
+            if (mem.startsWith(u8, line, "bun ")) {
+                // Extract version part after "bun "
+                const version_part = mem.trim(u8, line[4..], &std.ascii.whitespace);
+                if (version_part.len > 0) {
+                    return allocator.dupe(u8, version_part) catch return null;
+                }
+            }
+        }
+        return null;
+    }
+};
+
+pub fn getInstalledVersions(allocator: mem.Allocator, install_dir: []const u8) !std.array_list.Managed([]const u8) {
+    const versions_dir_path = try fs_utils.getBunvVersionsDir(allocator, install_dir);
     defer allocator.free(versions_dir_path);
 
     var result = std.array_list.Managed([]const u8).init(allocator);
@@ -25,7 +96,7 @@ pub fn getInstalledVersions(allocator: mem.Allocator, bunv_install_dir: []const 
         const version = try allocator.dupe(u8, entry.name);
         errdefer allocator.free(version);
 
-        const version_dir = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
+        const version_dir = try fs_utils.getBunVersionDir(allocator, install_dir, version);
         defer allocator.free(version_dir);
 
         const bin = try fs_utils.getBunBinaryPath(allocator, version_dir);
@@ -88,10 +159,10 @@ pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 
     return null;
 }
 
-pub fn getLatestLocalVersion(allocator: mem.Allocator, is_debug: bool, bunv_install_dir: []const u8) !?[]const u8 {
+pub fn getLatestLocalVersion(allocator: mem.Allocator, is_debug: bool, install_dir: []const u8) !?[]const u8 {
     if (is_debug) std.debug.print("Getting latest local version...\n", .{});
 
-    const installed_versions = try getInstalledVersions(allocator, bunv_install_dir);
+    const installed_versions = try getInstalledVersions(allocator, install_dir);
     if (is_debug) std.debug.print("{d} versions: {any}\n", .{ installed_versions.items.len, installed_versions.items });
     defer {
         for (installed_versions.items) |item| {
@@ -148,8 +219,8 @@ pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) ![]const
     return allocator.dupe(u8, tag);
 }
 
-pub fn ensureVersionDownloaded(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) !void {
-    const bun_dir = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
+pub fn ensureVersionDownloaded(allocator: mem.Allocator, install_dir: []const u8, version: []const u8) !void {
+    const bun_dir = try fs_utils.getBunVersionDir(allocator, install_dir, version);
     defer allocator.free(bun_dir);
 
     const bin_path = try fs_utils.getBunBinaryPath(allocator, bun_dir);
@@ -163,9 +234,9 @@ pub fn ensureVersionDownloaded(allocator: mem.Allocator, bunv_install_dir: []con
     std.debug.print("Installing...\n", .{});
 
     // Ensure the config directory exists before proceeding
-    try fs_utils.ensureDirAbsolute(bunv_install_dir);
+    try fs_utils.ensureDirAbsolute(install_dir);
 
-    const install_script_path = try fs_utils.joinPath(allocator, &[_][]const u8{ bunv_install_dir, "install.sh" });
+    const install_script_path = try fs_utils.joinPath(allocator, &[_][]const u8{ install_dir, "install.sh" });
     defer allocator.free(install_script_path);
 
     // Download install script
@@ -263,73 +334,3 @@ fn confirmInstallation(version: []const u8) !void {
     std.debug.print("Installation aborted by user\n", .{});
     std.process.exit(1);
 }
-
-const VersionFile = struct {
-    name: []const u8,
-    extractBunVersion: *const fn (allocator: mem.Allocator, contents: []u8) ?[]const u8,
-};
-const PackageJsonVersionFile = struct {
-    fn init() VersionFile {
-        return .{
-            .name = "package.json",
-            .extractBunVersion = &extractBunVersion,
-        };
-    }
-    fn extractBunVersion(allocator: mem.Allocator, contents: []u8) ?[]const u8 {
-        const parsed = json.parseFromSlice(std.json.Value, allocator, contents, .{}) catch |err| switch (err) {
-            else => return null,
-        };
-        defer parsed.deinit();
-
-        // "bun@X.Y.Z"
-        if (parsed.value.object.get("packageManager")) |package_manager| {
-            const str = package_manager.string;
-            if (mem.eql(u8, str[0..4], "bun@")) {
-                return allocator.dupe(u8, str[4..]) catch return null;
-            }
-        }
-        return null;
-    }
-};
-
-const BunVersionFile = struct {
-    fn init() VersionFile {
-        return .{
-            .name = ".bun-version",
-            .extractBunVersion = &extractBunVersion,
-        };
-    }
-    fn extractBunVersion(allocator: mem.Allocator, contents: []u8) ?[]u8 {
-        return allocator.dupe(u8, mem.trim(u8, contents, &std.ascii.whitespace)) catch |err| switch (err) {
-            else => return null,
-        };
-    }
-};
-
-const ToolVersionsFile = struct {
-    fn init() VersionFile {
-        return .{
-            .name = ".tool-versions",
-            .extractBunVersion = &extractBunVersion,
-        };
-    }
-    fn extractBunVersion(allocator: mem.Allocator, contents: []u8) ?[]u8 {
-        var lines_it = mem.splitScalar(u8, contents, '\n');
-        while (lines_it.next()) |line| {
-            // Skip empty lines and comments
-            if (line.len == 0 or line[0] == '#') {
-                continue;
-            }
-
-            // Check if line starts with "bun "
-            if (mem.startsWith(u8, line, "bun ")) {
-                // Extract version part after "bun "
-                const version_part = mem.trim(u8, line[4..], &std.ascii.whitespace);
-                if (version_part.len > 0) {
-                    return allocator.dupe(u8, version_part) catch return null;
-                }
-            }
-        }
-        return null;
-    }
-};
