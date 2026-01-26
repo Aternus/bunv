@@ -118,7 +118,12 @@ pub fn getConfigDir(allocator: mem.Allocator, is_debug: bool) ![]const u8 {
     defer allocator.free(home_dir);
 
     if (is_debug) std.debug.print("Home Dir: {s}\n", .{home_dir});
-    return try fs.path.join(allocator, &[_][]const u8{ home_dir, bunv_install });
+
+    const config_dir = try fs.path.join(allocator, &[_][]const u8{ home_dir, bunv_install });
+
+    if (is_debug) std.debug.print("Config Dir: {s}\n", .{config_dir});
+
+    return config_dir;
 }
 
 /// Check to see if the DEBUG environment variable is set to "bunv"

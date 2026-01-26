@@ -1,0 +1,37 @@
+const std = @import("std");
+const mem = std.mem;
+const vm = @import("../vm.zig");
+const output = @import("../cli/output.zig");
+
+pub fn run(allocator: mem.Allocator, config_dir: []const u8, version: []const u8) !void {
+    const installed_versions = try vm.getInstalledVersions(allocator, config_dir);
+    defer {
+        for (installed_versions.items) |item| {
+            allocator.free(item);
+        }
+        installed_versions.deinit();
+    }
+
+    var version_exists = false;
+    for (installed_versions.items) |installed_version| {
+        if (mem.eql(u8, installed_version, version)) {
+            version_exists = true;
+            break;
+        }
+    }
+
+    if (!version_exists) {
+        output.fatalFmt("Bun v{s} is not installed", .{version});
+    }
+
+    const version_dir = try vm.getVersionDir(allocator, config_dir, version);
+    defer allocator.free(version_dir);
+
+    output.printRemovingVersion(version);
+
+    std.fs.deleteTreeAbsolute(version_dir) catch |err| {
+        output.fatalFmt("Failed to remove Bun v{s}: {s}", .{ version, @errorName(err) });
+    };
+
+    output.printRemovedVersion(version);
+}

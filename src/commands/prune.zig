@@ -2,9 +2,9 @@ const std = @import("std");
 const builtin = @import("builtin");
 const fs = std.fs;
 const mem = std.mem;
-const utils = @import("utils.zig");
-const vm = @import("vm.zig");
-const c = @import("colors.zig");
+const utils = @import("../utils.zig");
+const vm = @import("../vm.zig");
+const c = @import("../colors.zig");
 
 pub const Options = struct {
     yes: bool = false,
@@ -79,7 +79,7 @@ const Report = struct {
     }
 };
 
-pub fn run(allocator: mem.Allocator, config_dir: []const u8, args: []const [:0]u8) !void {
+pub fn run(allocator: mem.Allocator, config_dir: []const u8, args: []const []const u8) !void {
     const options = try parseArgs(allocator, args);
 
     var report = try scanAll(allocator, config_dir, options);
@@ -100,7 +100,7 @@ pub fn run(allocator: mem.Allocator, config_dir: []const u8, args: []const [:0]u
     try executeActions(allocator, report.items.items);
 }
 
-fn parseArgs(allocator: mem.Allocator, args: []const [:0]u8) !Options {
+fn parseArgs(allocator: mem.Allocator, args: []const []const u8) !Options {
     _ = allocator;
     var options = Options{};
     for (args) |arg| {

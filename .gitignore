@@ -283,5 +283,4 @@ Temporary Items
 # CUSTOM
 .zbscanhelper.zig
 .envrc
-.dev/
 package-lock.json
