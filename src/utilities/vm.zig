@@ -5,6 +5,7 @@ const json = std.json;
 const http = std.http;
 const fs_utils = @import("fs.zig");
 const c = @import("colors.zig");
+const cmp = @import("cmp.zig");
 
 const VersionFile = struct {
     name: []const u8,
@@ -92,6 +93,7 @@ pub fn getInstalledVersions(allocator: mem.Allocator, install_dir: []const u8) !
     var versions_iter = versions_dir.iterateAssumeFirstIteration();
     while (try versions_iter.next()) |entry| {
         if (entry.kind != .directory) continue;
+        _ = std.SemanticVersion.parse(entry.name) catch continue;
 
         const version = try allocator.dupe(u8, entry.name);
         errdefer allocator.free(version);
@@ -109,11 +111,12 @@ pub fn getInstalledVersions(allocator: mem.Allocator, install_dir: []const u8) !
         }
     }
 
+    std.sort.heap([]const u8, result.items, {}, cmp.semVerDESC);
     return result;
 }
 
 pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 {
-    if (is_debug) std.debug.print("Figuring out the Bun version required for the project...\n");
+    if (is_debug) std.debug.print("Figuring out the Bun version required for the project...\n", .{});
 
     const files = comptime [_]VersionFile{
         PackageJsonVersionFile.init(),
@@ -159,7 +162,7 @@ pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 
 }
 
 pub fn getLatestLocalVersion(allocator: mem.Allocator, is_debug: bool, install_dir: []const u8) !?[]const u8 {
-    if (is_debug) std.debug.print("Figuring out the latest Bun version installed locally...\n");
+    if (is_debug) std.debug.print("Figuring out the latest Bun version installed locally...\n", .{});
 
     const installed_versions = try getInstalledVersions(allocator, install_dir);
     defer {
@@ -174,7 +177,6 @@ pub fn getLatestLocalVersion(allocator: mem.Allocator, is_debug: bool, install_d
     if (installed_versions.items.len == 0) {
         return null;
     }
-    // TODO: installed versions are not sorted, so naively assuming the first item is the latest is wrong.
     return try allocator.dupe(u8, installed_versions.items[0]);
 }
 
