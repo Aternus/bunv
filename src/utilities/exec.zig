@@ -25,28 +25,26 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
         std.process.exit(0);
     }
 
-    const bunv_install_dir = try fs_utils.getBunvInstallDir(allocator, is_debug);
-    defer allocator.free(bunv_install_dir);
-
-    if (is_debug) std.debug.print("Bunv Install Dir: {s}\n", .{bunv_install_dir});
+    const install_dir = try fs_utils.getBunvInstallDir(allocator, is_debug);
+    defer allocator.free(install_dir);
 
     const project_version = try vm.getProjectVersion(allocator, is_debug) orelse
-        try vm.getLatestLocalVersion(allocator, is_debug, bunv_install_dir) orelse
+        try vm.getLatestLocalVersion(allocator, is_debug, install_dir) orelse
         try vm.getLatestRemoteVersion(allocator, is_debug);
     defer allocator.free(project_version);
 
-    try vm.ensureVersionDownloaded(allocator, bunv_install_dir, project_version);
+    try vm.ensureVersionDownloaded(allocator, install_dir, project_version);
 
-    const bunv_version_dir = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, project_version);
-    defer allocator.free(bunv_version_dir);
+    const version_dir = try fs_utils.getBunVersionDir(allocator, install_dir, project_version);
+    defer allocator.free(version_dir);
 
-    const bun_bin = try fs_utils.getBunBinaryPath(allocator, bunv_version_dir);
-    defer allocator.free(bun_bin);
+    const bin_path = try fs_utils.getBunBinaryPath(allocator, version_dir);
+    defer allocator.free(bin_path);
 
     var new_args = try std.array_list.Managed([]const u8).initCapacity(allocator, 5);
     defer new_args.deinit();
 
-    try new_args.append(bun_bin);
+    try new_args.append(bin_path);
     if (cmd == .bunx) try new_args.append("x");
 
     for (args[1..]) |arg| {
@@ -62,7 +60,7 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
 
-    try env_map.put("BUN_INSTALL", bunv_version_dir);
+    try env_map.put("BUN_INSTALL", version_dir);
 
     return runBunCmd(allocator, new_args.items, &env_map);
 }
