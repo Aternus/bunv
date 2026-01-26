@@ -30,7 +30,7 @@ pub fn run(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []co
 
     output.printRemovingVersion(version);
 
-    std.fs.deleteTreeAbsolute(version_dir) catch |err| {
+    fs_utils.deleteTreeAbsolute(version_dir) catch |err| {
         output.fatalFmt("Failed to remove Bun v{s}: {s}", .{ version, @errorName(err) });
     };
 

@@ -1,5 +1,4 @@
 const std = @import("std");
-const fs = std.fs;
 const mem = std.mem;
 const fs_utils = @import("../utilities/fs.zig");
 const c = @import("../utilities/colors.zig");

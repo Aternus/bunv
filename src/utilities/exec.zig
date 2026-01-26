@@ -1,5 +1,4 @@
 const std = @import("std");
-const fs = std.fs;
 const mem = std.mem;
 const builtin = @import("builtin");
 
@@ -38,10 +37,10 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
 
     try vm.ensureVersionDownloaded(allocator, bunv_install_dir, project_version);
 
-    const bunv_version_dir = try fs.path.join(allocator, &[_][]const u8{ bunv_install_dir, "versions", project_version });
+    const bunv_version_dir = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, project_version);
     defer allocator.free(bunv_version_dir);
 
-    const bun_bin = try fs.path.join(allocator, &[_][]const u8{ bunv_version_dir, "bin", "bun" });
+    const bun_bin = try fs_utils.getBunBinPath(allocator, bunv_install_dir, project_version);
     defer allocator.free(bun_bin);
 
     var new_args = try std.array_list.Managed([]const u8).initCapacity(allocator, 5);

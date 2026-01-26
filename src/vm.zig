@@ -1,7 +1,6 @@
 const std = @import("std");
 const os = std.os;
 const mem = std.mem;
-const fs = std.fs;
 const json = std.json;
 const http = std.http;
 const fs_utils = @import("utilities/fs.zig");
@@ -13,7 +12,7 @@ pub fn getInstalledVersions(allocator: mem.Allocator, bunv_install_dir: []const 
 
     var result = std.array_list.Managed([]const u8).init(allocator);
 
-    var versions_dir = fs.openDirAbsolute(versions_dir_path, .{ .iterate = true }) catch |err| switch (err) {
+    var versions_dir = fs_utils.openDirAbsolute(versions_dir_path, .{ .iterate = true }) catch |err| switch (err) {
         error.FileNotFound => return result,
         else => |e| return e,
     };
@@ -29,7 +28,7 @@ pub fn getInstalledVersions(allocator: mem.Allocator, bunv_install_dir: []const 
         const bin = try fs_utils.getBunBinPath(allocator, bunv_install_dir, version);
         defer allocator.free(bin);
 
-        if (try fs_utils.isFileExists(bin)) {
+        if (try fs_utils.fileExists(bin)) {
             try result.append(version);
         } else {
             allocator.free(version);
@@ -47,16 +46,16 @@ pub fn detectProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const 
         ToolVersionsFile.init(),
     };
 
-    var current_dir = try fs.cwd().realpathAlloc(allocator, ".");
+    var current_dir = try fs_utils.realpathAlloc(allocator, ".");
     defer allocator.free(current_dir);
 
     while (true) {
         if (is_debug) std.debug.print("Checking dir: {s}\n", .{current_dir});
         for (files) |version_file| {
-            const file_path = try fs.path.join(allocator, &[_][]const u8{ current_dir, version_file.name });
+            const file_path = try fs_utils.joinPath(allocator, &[_][]const u8{ current_dir, version_file.name });
             defer allocator.free(file_path);
 
-            const file = fs.openFileAbsolute(file_path, .{}) catch |err| switch (err) {
+            const file = fs_utils.openFileAbsolute(file_path, .{}) catch |err| switch (err) {
                 error.FileNotFound => continue,
                 else => |e| return e,
             };
@@ -74,12 +73,12 @@ pub fn detectProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const 
         }
 
         // Move up to the parent directory
-        const parent_dir = fs.path.dirname(current_dir);
+        const parent_dir = fs_utils.dirname(current_dir);
         if (parent_dir == null or mem.eql(u8, parent_dir.?, current_dir)) {
             // We've reached the root directory, stop searching
             break;
         }
-        const new_dir = try fs.path.join(allocator, &[_][]const u8{parent_dir.?});
+        const new_dir = try fs_utils.joinPath(allocator, &[_][]const u8{parent_dir.?});
         allocator.free(current_dir);
         current_dir = new_dir;
     }
@@ -150,7 +149,7 @@ pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) ![]const
 pub fn ensureVersionDownloaded(allocator: mem.Allocator, bunv_install_dir: []const u8, version: []const u8) !void {
     const bin = try fs_utils.getBunBinPath(allocator, bunv_install_dir, version);
     defer allocator.free(bin);
-    if (try fs_utils.isFileExists(bin)) {
+    if (try fs_utils.fileExists(bin)) {
         return;
     }
 
@@ -159,12 +158,9 @@ pub fn ensureVersionDownloaded(allocator: mem.Allocator, bunv_install_dir: []con
     std.debug.print("Installing...\n", .{});
 
     // Ensure the config directory exists before proceeding
-    fs.makeDirAbsolute(bunv_install_dir) catch |err| switch (err) {
-        error.PathAlreadyExists => {},
-        else => |e| return e,
-    };
+    try fs_utils.ensureDirAbsolute(bunv_install_dir);
 
-    const install_script_path = try fs.path.join(allocator, &[_][]const u8{ bunv_install_dir, "install.sh" });
+    const install_script_path = try fs_utils.joinPath(allocator, &[_][]const u8{ bunv_install_dir, "install.sh" });
     defer allocator.free(install_script_path);
 
     // Download install script

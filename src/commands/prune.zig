@@ -1,6 +1,5 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const fs = std.fs;
 const mem = std.mem;
 const env_utils = @import("../utilities/env.zig");
 const fs_utils = @import("../utilities/fs.zig");
@@ -181,10 +180,10 @@ fn findBunvInstalls(allocator: mem.Allocator, bunv_install_dir: []const u8, repo
 
 fn addBunvShimBin(allocator: mem.Allocator, bunv_install_dir: []const u8, report: *Report) !void {
     const bun_name = if (builtin.os.tag == .windows) "bun.exe" else "bun";
-    const shim_bin = try fs.path.join(allocator, &[_][]const u8{ bunv_install_dir, "bin", bun_name });
+    const shim_bin = try fs_utils.joinPath(allocator, &[_][]const u8{ bunv_install_dir, "bin", bun_name });
     defer allocator.free(shim_bin);
 
-    if (pathExists(shim_bin)) {
+    if (fs_utils.pathExists(shim_bin)) {
         try report.addKnownBin(allocator, shim_bin);
     }
 }
@@ -207,8 +206,8 @@ fn findOfficialInstall(allocator: mem.Allocator, bunv_install_dir: []const u8, r
 
         const bin = try bunBinaryPath(allocator, install_dir);
         defer allocator.free(bin);
-        const install_dir_exists = dirExists(install_dir);
-        const bin_exists = pathExists(bin);
+        const install_dir_exists = fs_utils.dirExists(install_dir);
+        const bin_exists = fs_utils.pathExists(bin);
         if (!install_dir_exists and !bin_exists) continue;
 
         var paths = std.array_list.Managed([]const u8).init(allocator);
@@ -252,9 +251,9 @@ fn findBrewInstall(allocator: mem.Allocator, report: *Report, options: Options) 
     if (prefix_result.exit_code == 0) {
         const trimmed = mem.trim(u8, prefix_result.stdout, &std.ascii.whitespace);
         if (trimmed.len > 0) {
-            const prefix_bin = try fs.path.join(allocator, &[_][]const u8{ trimmed, "bin", "bun" });
+            const prefix_bin = try fs_utils.joinPath(allocator, &[_][]const u8{ trimmed, "bin", "bun" });
             defer allocator.free(prefix_bin);
-            if (pathExists(prefix_bin)) {
+            if (fs_utils.pathExists(prefix_bin)) {
                 try paths.append(try allocator.dupe(u8, prefix_bin));
                 try report.addKnownBin(allocator, prefix_bin);
             }
@@ -551,7 +550,7 @@ fn executeActions(allocator: mem.Allocator, items: []Item) !void {
             .delete_tree => |path| {
                 var item_failed = false;
                 std.debug.print("Removing {s}...\n", .{item.label});
-                std.fs.deleteTreeAbsolute(path) catch |err| {
+                fs_utils.deleteTreeAbsolute(path) catch |err| {
                     std.debug.print("{s}Error: failed to remove {s}: {s}{s}\n", .{ c.red, item.label, @errorName(err), c.reset });
                     failed = true;
                     item_failed = true;
@@ -589,27 +588,9 @@ fn executeActions(allocator: mem.Allocator, items: []Item) !void {
 
 fn bunBinaryPath(allocator: mem.Allocator, install_dir: []const u8) ![]const u8 {
     if (builtin.os.tag == .windows) {
-        return fs.path.join(allocator, &[_][]const u8{ install_dir, "bin", "bun.exe" });
+        return fs_utils.joinPath(allocator, &[_][]const u8{ install_dir, "bin", "bun.exe" });
     }
-    return fs.path.join(allocator, &[_][]const u8{ install_dir, "bin", "bun" });
-}
-
-fn pathExists(path: []const u8) bool {
-    std.fs.accessAbsolute(path, .{}) catch |err| switch (err) {
-        error.FileNotFound => return false,
-        else => return false,
-    };
-    return true;
-}
-
-fn dirExists(path: []const u8) bool {
-    var dir = std.fs.openDirAbsolute(path, .{}) catch |err| switch (err) {
-        error.FileNotFound => return false,
-        error.NotDir => return false,
-        else => return false,
-    };
-    dir.close();
-    return true;
+    return fs_utils.joinPath(allocator, &[_][]const u8{ install_dir, "bin", "bun" });
 }
 
 fn commandExists(allocator: mem.Allocator, name: []const u8) !bool {
@@ -637,13 +618,13 @@ fn findExecutableInPath(allocator: mem.Allocator, name: []const u8) !?[]const u8
             for (exts) |ext| {
                 const candidate = try std.fmt.allocPrint(allocator, "{s}{s}", .{ name, ext });
                 defer allocator.free(candidate);
-                const full = try fs.path.join(allocator, &[_][]const u8{ dir, candidate });
-                if (pathExists(full)) return full;
+                const full = try fs_utils.joinPath(allocator, &[_][]const u8{ dir, candidate });
+                if (fs_utils.pathExists(full)) return full;
                 allocator.free(full);
             }
         } else {
-            const full = try fs.path.join(allocator, &[_][]const u8{ dir, name });
-            if (pathExists(full)) return full;
+            const full = try fs_utils.joinPath(allocator, &[_][]const u8{ dir, name });
+            if (fs_utils.pathExists(full)) return full;
             allocator.free(full);
         }
     }
@@ -663,9 +644,9 @@ fn findExecutablesInPath(allocator: mem.Allocator, name: []const u8) !std.array_
     while (it.next()) |dir| {
         if (dir.len == 0) continue;
 
-        const full = try fs.path.join(allocator, &[_][]const u8{ dir, name });
+        const full = try fs_utils.joinPath(allocator, &[_][]const u8{ dir, name });
         defer allocator.free(full);
-        if (pathExists(full)) {
+        if (fs_utils.pathExists(full)) {
             try result.append(try allocator.dupe(u8, full));
         }
     }
@@ -790,7 +771,7 @@ fn officialInstallCandidates(
         try candidates.append(try allocator.dupe(u8, bun_install));
     }
 
-    const default_install = try fs.path.join(allocator, &[_][]const u8{ home_dir, ".bun" });
+    const default_install = try fs_utils.joinPath(allocator, &[_][]const u8{ home_dir, ".bun" });
     defer allocator.free(default_install);
     if (!containsPath(candidates.items, default_install)) {
         try candidates.append(try allocator.dupe(u8, default_install));
