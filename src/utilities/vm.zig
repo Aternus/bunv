@@ -1,11 +1,17 @@
 const std = @import("std");
-const os = std.os;
 const mem = std.mem;
 const json = std.json;
 const http = std.http;
+const builtin = @import("builtin");
+const archive_utils = @import("archive.zig");
+const crypto_utils = @import("crypto.zig");
 const fs_utils = @import("fs.zig");
+const http_utils = @import("http.zig");
+const platform = @import("platform.zig");
 const c = @import("colors.zig");
 const cmp = @import("cmp.zig");
+const bun_releases = @import("bun_releases.zig");
+const prompt = @import("../cli/prompt.zig");
 
 const VersionFile = struct {
     name: []const u8,
@@ -222,7 +228,7 @@ pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) ![]const
     return allocator.dupe(u8, tag);
 }
 
-pub fn downloadVersion(allocator: mem.Allocator, install_dir: []const u8, version: []const u8) !void {
+pub fn ensureVersionInstalled(allocator: mem.Allocator, install_dir: []const u8, version: []const u8) !void {
     const version_dir = try fs_utils.getBunVersionDir(allocator, install_dir, version);
     defer allocator.free(version_dir);
 
@@ -233,105 +239,135 @@ pub fn downloadVersion(allocator: mem.Allocator, install_dir: []const u8, versio
         return;
     }
 
-    try confirmInstallation(version);
+    try ensureInstallAllowed(version);
 
     std.debug.print("Installing...\n", .{});
 
+    const versions_dir = try fs_utils.getBunvVersionsDir(allocator, install_dir);
+    defer allocator.free(versions_dir);
+    const bin_dir = try fs_utils.joinPath(allocator, &[_][]const u8{ version_dir, "bin" });
+    defer allocator.free(bin_dir);
+
     try fs_utils.ensureDirAbsolute(install_dir);
+    try fs_utils.ensureDirAbsolute(versions_dir);
+    try fs_utils.ensureDirAbsolute(version_dir);
+    try fs_utils.ensureDirAbsolute(bin_dir);
 
-    const install_script_path = try fs_utils.joinPath(allocator, &[_][]const u8{ install_dir, "install.sh" });
-    defer allocator.free(install_script_path);
+    const target = platform.resolveBunTarget(allocator) catch |err| {
+        if (err != error.UnsupportedPlatform) return err;
+        std.debug.print(
+            "Unsupported platform: {s}/{s} (supported: macOS/Linux/Windows × x86_64/aarch64)\n",
+            .{ @tagName(builtin.os.tag), @tagName(builtin.cpu.arch) },
+        );
+        std.process.exit(1);
+    };
+    defer allocator.free(target.target);
 
-    // Download install script
+    if (target.used_rosetta) {
+        std.debug.print("{s}Detected Rosetta translation. Using darwin-aarch64 build.{s}\n", .{ c.yellow, c.reset });
+    }
 
-    const curlProcess = try std.process.Child.run(.{
-        .allocator = allocator,
-        .argv = &[_][]const u8{
-            "curl",
-            "-fsSL",
-            "-o",
-            install_script_path,
-            "https://bun.sh/install",
-        },
-    });
-    defer allocator.free(curlProcess.stderr);
-    defer allocator.free(curlProcess.stdout);
+    const asset = try bun_releases.assetNameForTarget(allocator, target.target);
+    defer allocator.free(asset);
 
-    if (curlProcess.term.Exited != 0) {
-        std.debug.print("Failed to download install script:\n\nSTDERR:\n{s}\n\nSTDOUT:\n{s}\n", .{ curlProcess.stderr, curlProcess.stdout });
+    const archive_url = try bun_releases.archiveUrl(allocator, version, asset);
+    defer allocator.free(archive_url);
+
+    var client = http.Client{ .allocator = allocator };
+    defer client.deinit();
+
+    const temp_dir = try fs_utils.getTempDir(allocator);
+    defer allocator.free(temp_dir);
+
+    const rand_hex = try crypto_utils.randomHexLower(allocator, 8);
+    defer allocator.free(rand_hex);
+
+    const temp_name = try std.fmt.allocPrint(allocator, "bunv-bun-v{s}-{s}.zip", .{ version, rand_hex });
+    defer allocator.free(temp_name);
+
+    const temp_archive_path = try fs_utils.joinPath(allocator, &[_][]const u8{ temp_dir, temp_name });
+    defer allocator.free(temp_archive_path);
+
+    std.debug.print("Downloading {s}...\n", .{asset});
+    http_utils.httpDownloadToFile(allocator, &client, archive_url, temp_archive_path, 1024 * 1024 * 512) catch |err| {
+        std.debug.print("Failed to download {s}: {any}\nURL: {s}\n", .{ asset, err, archive_url });
+        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
+        std.process.exit(1);
+    };
+
+    const shasums = bun_releases.downloadShasums256(allocator, &client, version) catch |err| {
+        std.debug.print("Failed to download SHASUMS256 for bun-v{s}: {any}\n", .{ version, err });
+        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
+        std.process.exit(1);
+    };
+    defer allocator.free(shasums);
+
+    const expected_digest = bun_releases.parseShasums256ForAsset(shasums, asset) catch |err| {
+        std.debug.print("Failed to parse SHASUMS256 for bun-v{s}: {any}\n", .{ version, err });
+        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
+        std.process.exit(1);
+    } orelse {
+        std.debug.print("Missing SHA-256 entry for {s} in release SHASUMS256\n", .{asset});
+        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
+        std.process.exit(1);
+    };
+
+    const actual_digest = crypto_utils.sha256File(temp_archive_path) catch |err| {
+        std.debug.print("Failed to compute SHA-256 for downloaded archive: {any}\n", .{err});
+        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
+        std.process.exit(1);
+    };
+    if (!mem.eql(u8, actual_digest[0..], expected_digest[0..])) {
+        const expected_hex = std.fmt.bytesToHex(expected_digest, .lower);
+        const actual_hex = std.fmt.bytesToHex(actual_digest, .lower);
+        std.debug.print(
+            "SHA-256 mismatch for {s}\nExpected: {s}\nActual:   {s}\n",
+            .{
+                asset,
+                expected_hex[0..],
+                actual_hex[0..],
+            },
+        );
+        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
         std.process.exit(1);
     }
 
-    // Run install script
-
-    var env = try std.process.getEnvMap(allocator);
-    defer env.deinit();
-
-    try env.put("BUN_INSTALL", version_dir);
-
-    const version_arg = try std.fmt.allocPrint(
-        allocator,
-        "bun-v{s}",
-        .{version},
-    );
-    defer allocator.free(version_arg);
-
-    const installProcess = try std.process.Child.run(.{
-        .allocator = allocator,
-        .argv = &[_][]const u8{
-            "bash",
-            install_script_path,
-            version_arg,
-        },
-        .env_map = &env,
-    });
-    defer allocator.free(installProcess.stderr);
-    defer allocator.free(installProcess.stdout);
-
-    if (installProcess.term.Exited != 0) {
-        std.debug.print("Failed to install Bun:\n\nSTDERR:\n{s}\n\nSTDOUT:\n{s}\n", .{ installProcess.stderr, installProcess.stdout });
+    archive_utils.extractBunFromZip(allocator, temp_archive_path, bin_path) catch |err| {
+        std.debug.print("Failed to extract bun from archive: {any}\n", .{err});
+        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
         std.process.exit(1);
-    }
+    };
+
+    std.fs.deleteFileAbsolute(temp_archive_path) catch {};
 
     std.debug.print("{s}✓{s} Done! {s}Bun v{s}{s} is installed\n", .{ c.green, c.reset, c.cyan, version, c.reset });
 }
 
-fn confirmInstallation(version: []const u8) !void {
+fn ensureInstallAllowed(version: []const u8) !void {
     var env_map = try std.process.getEnvMap(std.heap.page_allocator);
     defer env_map.deinit();
 
-    // Check if auto-install is enabled via environment variable
     if (env_map.get("BUNV_AUTO_INSTALL")) |value| {
         if (mem.eql(u8, value, "1")) {
-            // Automatically proceed with installation
             std.debug.print("{s}Bun v{s} is not installed. Auto-installing...{s}\n", .{ c.yellow, version, c.reset });
             return;
         }
     }
 
-    var stdout_buf: [1024]u8 = undefined;
-    var stdout = std.fs.File.stdout().writer(&stdout_buf);
-
-    // Check if stdin is a TTY (interactive)
     const stdin_file = std.fs.File.stdin();
     const is_interactive = stdin_file.isTty();
 
     if (is_interactive) {
-        var stdin_buf: [1024]u8 = undefined;
-        var stdin = stdin_file.reader(&stdin_buf);
+        var prompt_buf: [512]u8 = undefined;
+        const prompt_msg = try std.fmt.bufPrint(
+            &prompt_buf,
+            "{s}Bun v{s} is not installed. Do you want to install it? [y/N]{s} ",
+            .{ c.yellow, version, c.reset },
+        );
 
-        try stdout.interface.print("{s}Bun v{s} is not installed. Do you want to install it? [y/N]{s} ", .{ c.yellow, version, c.reset });
-        try stdout.interface.flush();
-        const user_input = stdin.interface.takeDelimiterExclusive('\n') catch |err| switch (err) {
-            error.StreamTooLong => "N",
-            error.EndOfStream => "N",
-            else => return err,
-        };
-
-        if (mem.eql(u8, user_input, "y")) return;
+        if (try prompt.promptConfirm(prompt_msg)) return;
     } else {
-        // Non-interactive mode, just display message and abort
-        try stdout.interface.print("{s}Bun v{s} is not installed. Run in an interactive terminal to install or set BUNV_AUTO_INSTALL=1.{s}\n", .{ c.yellow, version, c.reset });
+        std.debug.print("{s}Bun v{s} is not installed. Run in an interactive terminal to install or set BUNV_AUTO_INSTALL=1.{s}\n", .{ c.yellow, version, c.reset });
     }
 
     std.debug.print("Installation aborted by user\n", .{});

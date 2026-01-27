@@ -33,7 +33,7 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
         try vm.getLatestRemoteVersion(allocator, is_debug);
     defer allocator.free(project_version);
 
-    try vm.downloadVersion(allocator, install_dir, project_version);
+    try vm.ensureVersionInstalled(allocator, install_dir, project_version);
 
     const version_dir = try fs_utils.getBunVersionDir(allocator, install_dir, project_version);
     defer allocator.free(version_dir);

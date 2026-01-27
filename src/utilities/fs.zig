@@ -62,6 +62,27 @@ pub fn realpathAlloc(allocator: mem.Allocator, path: []const u8) ![]u8 {
     return fs.cwd().realpathAlloc(allocator, path);
 }
 
+pub fn getTempDir(allocator: mem.Allocator) ![]u8 {
+    var env_map = try std.process.getEnvMap(allocator);
+    defer env_map.deinit();
+
+    const keys = if (builtin.os.tag == .windows)
+        [_][]const u8{ "TEMP", "TMP", "TMPDIR" }
+    else
+        [_][]const u8{ "TMPDIR", "TMP", "TEMP" };
+
+    for (keys) |key| {
+        if (env_map.get(key)) |value| {
+            if (value.len > 0) return allocator.dupe(u8, value);
+        }
+    }
+
+    if (builtin.os.tag == .windows) {
+        return allocator.dupe(u8, "C:\\\\Windows\\\\Temp");
+    }
+    return allocator.dupe(u8, "/tmp");
+}
+
 pub fn getBunvInstallDir(allocator: mem.Allocator, is_debug: bool) ![]const u8 {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
@@ -97,4 +118,52 @@ pub fn getBunBinaryPath(allocator: mem.Allocator, install_dir: []const u8) ![]u8
 
 pub fn getBunGlobalPackagesDir(allocator: mem.Allocator, install_dir: []const u8, version: []const u8) ![]u8 {
     return try joinPath(allocator, &[_][]const u8{ install_dir, "versions", version, "install", "global" });
+}
+
+pub fn findRelPathByBasename(
+    allocator: mem.Allocator,
+    root_dir: fs.Dir,
+    basename: []const u8,
+) !?[]u8 {
+    var pending = std.array_list.Managed([]u8).init(allocator);
+    defer {
+        for (pending.items) |p| allocator.free(p);
+        pending.deinit();
+    }
+
+    try pending.append(try allocator.dupe(u8, ""));
+
+    while (pending.items.len > 0) {
+        const idx = pending.items.len - 1;
+        const rel_dir = pending.items[idx];
+        pending.items.len -= 1;
+        defer allocator.free(rel_dir);
+
+        var dir = if (rel_dir.len == 0)
+            root_dir
+        else
+            try root_dir.openDir(rel_dir, .{ .iterate = true });
+        defer if (rel_dir.len != 0) dir.close();
+
+        var it = dir.iterateAssumeFirstIteration();
+        while (try it.next()) |entry| {
+            switch (entry.kind) {
+                .file => {
+                    if (!mem.eql(u8, entry.name, basename)) continue;
+                    if (rel_dir.len == 0) return try allocator.dupe(u8, entry.name);
+                    return try joinPath(allocator, &[_][]const u8{ rel_dir, entry.name });
+                },
+                .directory => {
+                    const next_rel = if (rel_dir.len == 0)
+                        try allocator.dupe(u8, entry.name)
+                    else
+                        try joinPath(allocator, &[_][]const u8{ rel_dir, entry.name });
+                    try pending.append(next_rel);
+                },
+                else => {},
+            }
+        }
+    }
+
+    return null;
 }
