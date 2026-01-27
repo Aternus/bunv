@@ -45,7 +45,7 @@ pub fn buildTargetFromOptions(allocator: mem.Allocator, opts: TargetOptions) !Ta
         target = next;
     }
 
-    if ((opts.os_tag == .linux or opts.os_tag == .macos) and opts.cpu_arch == .x86_64 and !opts.has_avx2 and !used_rosetta) {
+    if (opts.cpu_arch == .x86_64 and (opts.os_tag == .linux or opts.os_tag == .macos) and !used_rosetta and !opts.has_avx2) {
         const next = try std.fmt.allocPrint(allocator, "{s}-baseline", .{target});
         allocator.free(target);
         target = next;
@@ -62,7 +62,7 @@ pub fn resolveBunTarget(allocator: mem.Allocator) !TargetSelection {
     const is_rosetta = builtin.os.tag == .macos and builtin.cpu.arch == .x86_64 and isRosettaTranslated(allocator);
 
     var has_avx2 = true;
-    if ((builtin.os.tag == .linux or builtin.os.tag == .macos) and builtin.cpu.arch == .x86_64 and !is_rosetta) {
+    if (builtin.cpu.arch == .x86_64 and (builtin.os.tag == .linux or builtin.os.tag == .macos) and !is_rosetta) {
         has_avx2 = detectAvx2(allocator);
     }
 
@@ -106,12 +106,10 @@ fn hasAvx2Linux(allocator: mem.Allocator) bool {
     defer allocator.free(buf);
 
     const n = file.readAll(buf) catch return false;
-    return process_utils.outputHasAvx2(buf[0..n]);
+    const output = buf[0..n];
+    return mem.indexOf(u8, output, "avx2") != null or mem.indexOf(u8, output, "AVX2") != null;
 }
 
 fn hasAvx2Mac(allocator: mem.Allocator) bool {
-    if (process_utils.commandOutputHasAvx2(allocator, &[_][]const u8{ "sysctl", "-n", "machdep.cpu.leaf7_features" })) return true;
-    if (process_utils.commandOutputHasAvx2(allocator, &[_][]const u8{ "sysctl", "-n", "machdep.cpu.features" })) return true;
-    if (process_utils.commandOutputHasAvx2(allocator, &[_][]const u8{ "sysctl", "-a" })) return true;
-    return false;
+    return process_utils.commandOutputEquals(allocator, &[_][]const u8{ "sysctl", "-n", "hw.optional.avx2_0" }, "1");
 }

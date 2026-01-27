@@ -10,18 +10,6 @@ pub fn commandOutputEquals(allocator: mem.Allocator, argv: []const []const u8, e
     return false;
 }
 
-pub fn commandOutputHasAvx2(allocator: mem.Allocator, argv: []const []const u8) bool {
-    if (commandOutput(allocator, argv)) |stdout| {
-        defer allocator.free(stdout);
-        return outputHasAvx2(stdout);
-    }
-    return false;
-}
-
-pub fn outputHasAvx2(output: []const u8) bool {
-    return mem.indexOf(u8, output, "AVX2") != null or mem.indexOf(u8, output, "avx2") != null;
-}
-
 fn commandOutput(allocator: mem.Allocator, argv: []const []const u8) ?[]u8 {
     const proc = std.process.Child.run(.{ .allocator = allocator, .argv = argv }) catch return null;
     defer allocator.free(proc.stderr);
