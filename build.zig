@@ -1,6 +1,7 @@
 const std = @import("std");
 const json = std.json;
 const builtin = @import("builtin");
+const zlinter = @import("zlinter");
 
 const bun = "bun";
 const bunx = "bunx";
@@ -22,15 +23,29 @@ pub fn build(b: *std.Build) !void {
     const version_str = parsed.value.object.get("version").?.string;
     const version = try std.SemanticVersion.parse(version_str);
 
-    const test_step = b.step("test", "Run unit tests");
-    try addUnitTests(b, target, optimize, test_step);
+    try addLinter(b);
+    try addUnitTests(b, target, optimize);
 
     addExe(b, target, optimize, version, bun);
     addExe(b, target, optimize, version, bunx);
     addExe(b, target, optimize, version, bunv);
 }
 
-fn addUnitTests(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode, test_step: *std.Build.Step) !void {
+fn addLinter(b: *std.Build) !void {
+    const lint_step = b.step("lint", "Lint source code");
+
+    var zbuilder = zlinter.builder(b, .{});
+    inline for (std.meta.fields(zlinter.BuiltinLintRule)) |f| {
+        const rule = @field(zlinter.BuiltinLintRule, f.name);
+        zbuilder.addRule(.{ .builtin = rule }, .{});
+    }
+
+    lint_step.dependOn(zbuilder.build());
+}
+
+fn addUnitTests(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
+    const test_step = b.step("test", "Run unit tests");
+
     var test_dir = try b.build_root.handle.openDir("tests", .{ .iterate = true });
     defer test_dir.close();
 

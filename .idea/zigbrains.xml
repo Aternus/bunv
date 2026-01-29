@@ -18,8 +18,13 @@
       "kind": "uninstall"
     },
     {
+      "name": "test",
+      "description": "Run unit tests",
+      "kind": "run"
+    },
+    {
       "name": "bun",
-      "description": "Run the bunx executable",
+      "description": "Run the bun executable",
       "kind": "run"
     },
     {
@@ -29,7 +34,7 @@
     },
     {
       "name": "bunv",
-      "description": "Run the bunx executable",
+      "description": "Run the bunv executable",
       "kind": "run"
     }
   ],
@@ -48,11 +53,16 @@
       "root": "src/bunv.zig",
       "public": false,
       "imports": []
+    },
+    {
+      "root": "tests/cmp.test.zig",
+      "public": false,
+      "imports": []
     }
   ],
   "dependencies": []
 }]]></list>
     </option>
   </component>
-  <component name="ZigToolchain" toolchain="ba2352d0-705c-4e53-a0e1-4c3afd7341a0" />
+  <component name="ZigToolchain" toolchain="dccef2d4-6fd9-4479-8487-2bfee19bc424" />
 </project>
