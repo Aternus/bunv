@@ -108,9 +108,11 @@ fn addExe(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin
     options.addOption(std.SemanticVersion, "version", version);
     exe.root_module.addOptions("config", options);
 
-    b.installArtifact(exe);
+    const install_exe = b.addInstallArtifact(exe, .{});
+    b.getInstallStep().dependOn(&install_exe.step);
 
     const run_exe = b.addRunArtifact(exe);
     const run_exe_step = b.step(name, "Run the " ++ name ++ " executable");
     run_exe_step.dependOn(&run_exe.step);
+    run_exe_step.dependOn(&install_exe.step);
 }

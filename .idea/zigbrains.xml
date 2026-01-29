@@ -3,8 +3,8 @@
   <component name="BuildScanner">
     <option name="projects">
       <list><![CDATA[{
-  "name": "<root>",
-  "version": null,
+  "name": "bunv",
+  "version": "0.15.2",
   "path": "/Users/kreznik/Dev/tools/bunv",
   "steps": [
     {
@@ -16,6 +16,11 @@
       "name": "uninstall",
       "description": "Remove build artifacts from prefix path",
       "kind": "uninstall"
+    },
+    {
+      "name": "lint",
+      "description": "Lint source code",
+      "kind": "custom"
     },
     {
       "name": "test",
@@ -55,9 +60,743 @@
       "imports": []
     },
     {
+      "root": "dependency",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
       "root": "tests/cmp.test.zig",
       "public": false,
       "imports": []
+    }
+  ],
+  "dependencies": [
+    {
+      "project": 1,
+      "lazy": false
+    }
+  ]
+}]]><![CDATA[{
+  "name": "zlinter",
+  "version": "0.0.1",
+  "path": "/Users/kreznik/.cache/zig/p/zlinter-0.0.1-OjQ08ZOnCwBx9meqm2cUjOkYUBeTUpKhQ3ERnVPg6ARc",
+  "steps": [
+    {
+      "name": "install",
+      "description": "Copy build artifacts to prefix path",
+      "kind": "uninstall"
+    },
+    {
+      "name": "uninstall",
+      "description": "Remove build artifacts from prefix path",
+      "kind": "uninstall"
+    },
+    {
+      "name": "integration-test",
+      "description": "Run integration tests",
+      "kind": "run"
+    },
+    {
+      "name": "integration-check",
+      "description": "Run integration checks",
+      "kind": "run"
+    },
+    {
+      "name": "unit-test",
+      "description": "Run unit tests",
+      "kind": "run"
+    },
+    {
+      "name": "test",
+      "description": "Run all tests",
+      "kind": "top_level"
+    },
+    {
+      "name": "website",
+      "description": "Build website.",
+      "kind": "install_artifact"
+    },
+    {
+      "name": "lint",
+      "description": "Lint the linters own source code.",
+      "kind": "custom"
+    },
+    {
+      "name": "docs",
+      "description": "Regenerate docs (should be run before every commit)",
+      "kind": "install_file"
+    }
+  ],
+  "modules": [
+    {
+      "root": "src/lib/zlinter.zig",
+      "public": true,
+      "imports": []
+    },
+    {
+      "root": "src/rules/field_naming.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/field_ordering.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/declaration_naming.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/function_naming.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/file_naming.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/import_ordering.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_unused.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_deprecated.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_empty_block.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_inferred_error_unions.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_orelse_unreachable.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_undefined.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_literal_only_bool_expression.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_hidden_allocations.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/switch_case_ordering.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/max_positional_args.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_comment_out_code.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_todo.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_literal_args.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_swallow_error.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/no_panic.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/require_braces.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/require_doc_comment.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/rules/require_errdefer_dealloc.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/exe/wasm.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/exe/run_linter.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zlinter",
+          "owner": 1,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "build_docs.zig",
+      "public": false,
+      "imports": []
+    }
+  ],
+  "dependencies": [
+    {
+      "project": 2,
+      "lazy": false
+    }
+  ]
+}]]><![CDATA[{
+  "name": "zls",
+  "version": "0.15.0",
+  "path": "/Users/kreznik/.cache/zig/p/zls-0.15.0-rmm5fkjqIwDZpmDHyKwxa9K2gcI3FPaGVFPwjYWFBM5B",
+  "steps": [
+    {
+      "name": "install",
+      "description": "Copy build artifacts to prefix path",
+      "kind": "install_artifact"
+    },
+    {
+      "name": "uninstall",
+      "description": "Remove build artifacts from prefix path",
+      "kind": "uninstall"
+    },
+    {
+      "name": "gen",
+      "description": "Regenerate config files",
+      "kind": "update_source_files"
+    },
+    {
+      "name": "release",
+      "description": "Build all release artifacts. (requires tar and 7z)",
+      "kind": "install_file"
+    },
+    {
+      "name": "check",
+      "description": "Check if ZLS compiles",
+      "kind": "compile"
+    },
+    {
+      "name": "test",
+      "description": "Run all the tests",
+      "kind": "run"
+    },
+    {
+      "name": "test-build-runner",
+      "description": "Run all the build runner tests",
+      "kind": "run"
+    },
+    {
+      "name": "test-analysis",
+      "description": "Run all the analysis tests",
+      "kind": "run"
+    }
+  ],
+  "modules": [
+    {
+      "root": "src/zls.zig",
+      "public": true,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zls",
+          "owner": 2,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "src/tools/config_gen.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "src/main.zig",
+      "public": false,
+      "imports": []
+    },
+    {
+      "root": "tests/tests.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zls",
+          "owner": 2,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "tests/analysis_check.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zls",
+          "owner": 2,
+          "module": 0
+        }
+      ]
+    },
+    {
+      "root": "tests/build_runner_check.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "zls",
+          "owner": 2,
+          "module": 0
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "project": 3,
+      "lazy": false
+    },
+    {
+      "project": 4,
+      "lazy": false
+    },
+    {
+      "project": 5,
+      "lazy": false
+    }
+  ]
+}]]><![CDATA[{
+  "name": "known_folders",
+  "version": "0.0.0",
+  "path": "/Users/kreznik/.cache/zig/p/known_folders-0.0.0-Fy-PJkfRAAAVdptXWXBspIIC7EkVgLgWozU5zIk5Zgcy",
+  "steps": [
+    {
+      "name": "install",
+      "description": "Copy build artifacts to prefix path",
+      "kind": "uninstall"
+    },
+    {
+      "name": "uninstall",
+      "description": "Remove build artifacts from prefix path",
+      "kind": "uninstall"
+    },
+    {
+      "name": "test",
+      "description": "Run unit tests",
+      "kind": "run"
+    }
+  ],
+  "modules": [
+    {
+      "root": "known-folders.zig",
+      "public": true,
+      "imports": []
+    }
+  ],
+  "dependencies": []
+}]]><![CDATA[{
+  "name": "diffz",
+  "version": "0.0.1",
+  "path": "/Users/kreznik/.cache/zig/p/diffz-0.0.1-G2tlIQrOAQCfH15jdyaLyrMgV8eGPouFhkCeYFTmJaLk",
+  "steps": [
+    {
+      "name": "install",
+      "description": "Copy build artifacts to prefix path",
+      "kind": "uninstall"
+    },
+    {
+      "name": "uninstall",
+      "description": "Remove build artifacts from prefix path",
+      "kind": "uninstall"
+    },
+    {
+      "name": "test",
+      "description": "Run all the tests",
+      "kind": "run"
+    },
+    {
+      "name": "coverage",
+      "description": "Generate coverage (kcov must be installed)",
+      "kind": "install_dir"
+    }
+  ],
+  "modules": [
+    {
+      "root": "DiffMatchPatch.zig",
+      "public": true,
+      "imports": []
+    }
+  ],
+  "dependencies": []
+}]]><![CDATA[{
+  "name": "lsp_kit",
+  "version": "0.1.0",
+  "path": "/Users/kreznik/.cache/zig/p/lsp_kit-0.1.0-bi_PL04yCgAxLsF0hH2a5sZKT84MGQaKXouw2jvCE8Nl",
+  "steps": [
+    {
+      "name": "install",
+      "description": "Copy build artifacts to prefix path",
+      "kind": "install_artifact"
+    },
+    {
+      "name": "uninstall",
+      "description": "Remove build artifacts from prefix path",
+      "kind": "uninstall"
+    },
+    {
+      "name": "docs",
+      "description": "Generate and install documentation",
+      "kind": "install_dir"
+    },
+    {
+      "name": "install-hello-server",
+      "description": "Install the hello-server example",
+      "kind": "install_artifact"
+    },
+    {
+      "name": "run-hello-client",
+      "description": "Run the hello-client example",
+      "kind": "run"
+    },
+    {
+      "name": "test",
+      "description": "Run all the tests",
+      "kind": "run"
+    },
+    {
+      "name": "coverage",
+      "description": "Generate a coverage report with kcov",
+      "kind": "install_dir"
+    }
+  ],
+  "modules": [
+    {
+      "root": "src/main.zig",
+      "public": true,
+      "imports": []
+    },
+    {
+      "root": "src/parser.zig",
+      "public": true,
+      "imports": []
+    },
+    {
+      "root": "generated",
+      "public": true,
+      "imports": [
+        {
+          "name": "parser",
+          "owner": 5,
+          "module": 1
+        }
+      ]
+    },
+    {
+      "root": "src/lsp.zig",
+      "public": true,
+      "imports": [
+        {
+          "name": "parser",
+          "owner": 5,
+          "module": 1
+        },
+        {
+          "name": "types",
+          "owner": 5,
+          "module": 2
+        }
+      ]
+    },
+    {
+      "root": "examples/hello_server.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "lsp",
+          "owner": 5,
+          "module": 3
+        }
+      ]
+    },
+    {
+      "root": "examples/hello_client.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "lsp",
+          "owner": 5,
+          "module": 3
+        }
+      ]
+    },
+    {
+      "root": "examples/my_first_server.zig",
+      "public": false,
+      "imports": [
+        {
+          "name": "lsp",
+          "owner": 5,
+          "module": 3
+        }
+      ]
     }
   ],
   "dependencies": []
