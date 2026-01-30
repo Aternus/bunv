@@ -1,9 +1,9 @@
 const std = @import("std");
 const mem = std.mem;
+const c = @import("../utilities/colors.zig");
 const env_utils = @import("../utilities/env.zig");
 const fs_utils = @import("../utilities/fs.zig");
 const vm = @import("../utilities/vm.zig");
-const c = @import("../utilities/colors.zig");
 
 pub const Options = struct {
     yes: bool = false,

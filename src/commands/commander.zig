@@ -1,10 +1,10 @@
 const std = @import("std");
 const mem = std.mem;
 const cli_args = @import("../cli/args.zig");
-const output = @import("../cli/output.zig");
 const list_cmd = @import("list.zig");
-const remove_cmd = @import("remove.zig");
+const output = @import("../cli/output.zig");
 const prune_cmd = @import("prune.zig");
+const remove_cmd = @import("remove.zig");
 
 pub fn dispatch(allocator: mem.Allocator, parsedArgs: cli_args.ParsedArgs) !void {
     switch (parsedArgs.command) {

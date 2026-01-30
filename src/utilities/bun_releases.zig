@@ -1,13 +1,13 @@
 const std = @import("std");
 const mem = std.mem;
 const http = std.http;
-const builtin = @import("builtin");
 const archive_utils = @import("archive.zig");
+const builtin = @import("builtin");
+const c = @import("colors.zig");
 const crypto_utils = @import("crypto.zig");
 const fs_utils = @import("fs.zig");
 const http_utils = @import("http.zig");
 const platform = @import("platform.zig");
-const c = @import("colors.zig");
 
 pub const ParseError = error{
     UnsupportedPlatform,
@@ -15,11 +15,11 @@ pub const ParseError = error{
 };
 
 const VerifyFailureKind = enum {
-    shasums_download_failed,
-    shasums_parse_failed,
-    missing_entry,
     compute_failed,
     digest_mismatch,
+    missing_entry,
+    shasums_download_failed,
+    shasums_parse_failed,
 };
 
 const VerifyFailure = struct {

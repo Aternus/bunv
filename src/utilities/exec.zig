@@ -2,10 +2,10 @@ const std = @import("std");
 const mem = std.mem;
 const builtin = @import("builtin");
 
-const vm = @import("vm.zig");
 const debug = @import("debug.zig");
 const env_utils = @import("env.zig");
 const fs_utils = @import("fs.zig");
+const vm = @import("vm.zig");
 
 pub const Cmd = enum {
     bun,

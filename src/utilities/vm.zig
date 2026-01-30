@@ -2,10 +2,10 @@ const std = @import("std");
 const mem = std.mem;
 const json = std.json;
 const http = std.http;
-const fs_utils = @import("fs.zig");
+const bun_releases = @import("bun_releases.zig");
 const c = @import("colors.zig");
 const cmp = @import("cmp.zig");
-const bun_releases = @import("bun_releases.zig");
+const fs_utils = @import("fs.zig");
 const prompt = @import("../cli/prompt.zig");
 
 const VersionFile = struct {

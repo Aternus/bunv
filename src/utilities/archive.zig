@@ -1,8 +1,8 @@
 const std = @import("std");
 const mem = std.mem;
 const builtin = @import("builtin");
-const fs_utils = @import("fs.zig");
 const crypto_utils = @import("crypto.zig");
+const fs_utils = @import("fs.zig");
 
 pub fn extractBunFromZip(allocator: mem.Allocator, archive_path: []const u8, bin_path: []const u8) !void {
     const temp_dir = try fs_utils.getTempDir(allocator);

@@ -1,5 +1,5 @@
-const std = @import("std");
 const builtin = @import("builtin");
+const std = @import("std");
 const fs = std.fs;
 const mem = std.mem;
 const env_utils = @import("env.zig");

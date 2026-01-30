@@ -1,10 +1,10 @@
-const std = @import("std");
-const env_utils = @import("utilities/env.zig");
-const fs_utils = @import("utilities/fs.zig");
 const builtin = @import("builtin");
-const config = @import("config");
 const cli_args = @import("cli/args.zig");
 const commander = @import("commands/commander.zig");
+const config = @import("config");
+const env_utils = @import("utilities/env.zig");
+const fs_utils = @import("utilities/fs.zig");
+const std = @import("std");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

@@ -3,10 +3,10 @@ const mem = std.mem;
 const output = @import("output.zig");
 
 pub const Command = enum {
-    list,
-    remove,
-    prune,
     help,
+    list,
+    prune,
+    remove,
 };
 
 pub const ParsedArgs = struct {

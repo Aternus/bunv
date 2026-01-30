@@ -1,8 +1,8 @@
 const std = @import("std");
 const mem = std.mem;
-const vm = @import("../utilities/vm.zig");
 const c = @import("../utilities/colors.zig");
 const fs_utils = @import("../utilities/fs.zig");
+const vm = @import("../utilities/vm.zig");
 
 pub fn run(allocator: mem.Allocator) !void {
     const installed_versions = try vm.getInstalledVersions(allocator);
