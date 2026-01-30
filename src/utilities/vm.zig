@@ -2,12 +2,7 @@ const std = @import("std");
 const mem = std.mem;
 const json = std.json;
 const http = std.http;
-const builtin = @import("builtin");
-const archive_utils = @import("archive.zig");
-const crypto_utils = @import("crypto.zig");
 const fs_utils = @import("fs.zig");
-const http_utils = @import("http.zig");
-const platform = @import("platform.zig");
 const c = @import("colors.zig");
 const cmp = @import("cmp.zig");
 const bun_releases = @import("bun_releases.zig");
@@ -84,8 +79,8 @@ const ToolVersionsFile = struct {
     }
 };
 
-pub fn getInstalledVersions(allocator: mem.Allocator, install_dir: []const u8) !std.array_list.Managed([]const u8) {
-    const versions_dir_path = try fs_utils.getBunvVersionsDir(allocator, install_dir);
+pub fn getInstalledVersions(allocator: mem.Allocator) !std.array_list.Managed([]const u8) {
+    const versions_dir_path = try fs_utils.getBunvVersionsDir(allocator);
     defer allocator.free(versions_dir_path);
 
     var result = std.array_list.Managed([]const u8).init(allocator);
@@ -104,10 +99,10 @@ pub fn getInstalledVersions(allocator: mem.Allocator, install_dir: []const u8) !
         const version = try allocator.dupe(u8, entry.name);
         errdefer allocator.free(version);
 
-        const version_dir = try fs_utils.getBunVersionDir(allocator, install_dir, version);
+        const version_dir = try fs_utils.getBunVersionDir(allocator, version);
         defer allocator.free(version_dir);
 
-        const bin = try fs_utils.getBunBinaryPath(allocator, version_dir);
+        const bin = try fs_utils.getBunBinPath(allocator, version);
         defer allocator.free(bin);
 
         if (try fs_utils.fileExists(bin)) {
@@ -134,7 +129,7 @@ pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 
     defer allocator.free(current_dir);
 
     while (true) {
-        if (is_debug) std.debug.print("Checking dir: {s}\n", .{current_dir});
+        if (is_debug) std.debug.print("  Checking dir: {s}\n", .{current_dir});
         for (files) |version_file| {
             const file_path = try fs_utils.joinPath(allocator, &[_][]const u8{ current_dir, version_file.name });
             defer allocator.free(file_path);
@@ -151,7 +146,7 @@ pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 
 
             _ = try file.readAll(buffer);
             if (version_file.extractBunVersion(allocator, buffer)) |version| {
-                if (is_debug) std.debug.print("Found v{s} in {s}\n", .{ version, file_path });
+                if (is_debug) std.debug.print("  Found v{s} in: {s}\n", .{ version, file_path });
                 return try allocator.dupe(u8, version);
             }
         }
@@ -167,10 +162,10 @@ pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 
     return null;
 }
 
-pub fn getLatestLocalVersion(allocator: mem.Allocator, is_debug: bool, install_dir: []const u8) !?[]const u8 {
+pub fn getLatestLocalVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 {
     if (is_debug) std.debug.print("Figuring out the latest Bun version installed locally...\n", .{});
 
-    const installed_versions = try getInstalledVersions(allocator, install_dir);
+    const installed_versions = try getInstalledVersions(allocator);
     defer {
         for (installed_versions.items) |item| {
             allocator.free(item);
@@ -228,11 +223,11 @@ pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) ![]const
     return allocator.dupe(u8, tag);
 }
 
-pub fn ensureVersionInstalled(allocator: mem.Allocator, install_dir: []const u8, version: []const u8) !void {
-    const version_dir = try fs_utils.getBunVersionDir(allocator, install_dir, version);
+pub fn ensureVersionInstalled(allocator: mem.Allocator, version: []const u8) !void {
+    const version_dir = try fs_utils.getBunVersionDir(allocator, version);
     defer allocator.free(version_dir);
 
-    const bin_path = try fs_utils.getBunBinaryPath(allocator, version_dir);
+    const bin_path = try fs_utils.getBunBinPath(allocator, version);
     defer allocator.free(bin_path);
 
     if (try fs_utils.fileExists(bin_path)) {
@@ -241,106 +236,9 @@ pub fn ensureVersionInstalled(allocator: mem.Allocator, install_dir: []const u8,
 
     try ensureInstallAllowed(version);
 
-    std.debug.print("Installing...\n", .{});
-
-    const versions_dir = try fs_utils.getBunvVersionsDir(allocator, install_dir);
-    defer allocator.free(versions_dir);
-    const bin_dir = try fs_utils.joinPath(allocator, &[_][]const u8{ version_dir, "bin" });
-    defer allocator.free(bin_dir);
-
-    try fs_utils.ensureDirAbsolute(install_dir);
-    try fs_utils.ensureDirAbsolute(versions_dir);
-    try fs_utils.ensureDirAbsolute(version_dir);
-    try fs_utils.ensureDirAbsolute(bin_dir);
-
-    const target = platform.resolveBunTarget(allocator) catch |err| {
-        if (err != error.UnsupportedPlatform) return err;
-        std.debug.print(
-            "Unsupported platform: {s}/{s} (supported: macOS/Linux/Windows × x86_64/aarch64)\n",
-            .{ @tagName(builtin.os.tag), @tagName(builtin.cpu.arch) },
-        );
-        std.process.exit(1);
-    };
-    defer allocator.free(target.target);
-
-    if (target.used_rosetta) {
-        std.debug.print("{s}Detected Rosetta translation. Using darwin-aarch64 build.{s}\n", .{ c.yellow, c.reset });
-    }
-
-    const asset = try bun_releases.assetNameForTarget(allocator, target.target);
-    defer allocator.free(asset);
-
-    const archive_url = try bun_releases.archiveUrl(allocator, version, asset);
-    defer allocator.free(archive_url);
-
     var client = http.Client{ .allocator = allocator };
     defer client.deinit();
-
-    const temp_dir = try fs_utils.getTempDir(allocator);
-    defer allocator.free(temp_dir);
-
-    const rand_hex = try crypto_utils.randomHexLower(allocator, 8);
-    defer allocator.free(rand_hex);
-
-    const temp_name = try std.fmt.allocPrint(allocator, "bunv-bun-v{s}-{s}.zip", .{ version, rand_hex });
-    defer allocator.free(temp_name);
-
-    const temp_archive_path = try fs_utils.joinPath(allocator, &[_][]const u8{ temp_dir, temp_name });
-    defer allocator.free(temp_archive_path);
-
-    std.debug.print("Downloading {s}...\n", .{asset});
-    http_utils.httpDownloadToFile(allocator, &client, archive_url, temp_archive_path, 1024 * 1024 * 512) catch |err| {
-        std.debug.print("Failed to download {s}: {any}\nURL: {s}\n", .{ asset, err, archive_url });
-        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
-        std.process.exit(1);
-    };
-
-    const shasums = bun_releases.downloadShasums256(allocator, &client, version) catch |err| {
-        std.debug.print("Failed to download SHASUMS256 for bun-v{s}: {any}\n", .{ version, err });
-        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
-        std.process.exit(1);
-    };
-    defer allocator.free(shasums);
-
-    const expected_digest = bun_releases.parseShasums256ForAsset(shasums, asset) catch |err| {
-        std.debug.print("Failed to parse SHASUMS256 for bun-v{s}: {any}\n", .{ version, err });
-        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
-        std.process.exit(1);
-    } orelse {
-        std.debug.print("Missing SHA-256 entry for {s} in release SHASUMS256\n", .{asset});
-        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
-        std.process.exit(1);
-    };
-
-    const actual_digest = crypto_utils.sha256File(temp_archive_path) catch |err| {
-        std.debug.print("Failed to compute SHA-256 for downloaded archive: {any}\n", .{err});
-        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
-        std.process.exit(1);
-    };
-    if (!mem.eql(u8, actual_digest[0..], expected_digest[0..])) {
-        const expected_hex = std.fmt.bytesToHex(expected_digest, .lower);
-        const actual_hex = std.fmt.bytesToHex(actual_digest, .lower);
-        std.debug.print(
-            "SHA-256 mismatch for {s}\nExpected: {s}\nActual:   {s}\n",
-            .{
-                asset,
-                expected_hex[0..],
-                actual_hex[0..],
-            },
-        );
-        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
-        std.process.exit(1);
-    }
-
-    archive_utils.extractBunFromZip(allocator, temp_archive_path, bin_path) catch |err| {
-        std.debug.print("Failed to extract bun from archive: {any}\n", .{err});
-        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
-        std.process.exit(1);
-    };
-
-    std.fs.deleteFileAbsolute(temp_archive_path) catch {};
-
-    std.debug.print("{s}✓{s} Done! {s}Bun v{s}{s} is installed\n", .{ c.green, c.reset, c.cyan, version, c.reset });
+    try bun_releases.installVersion(allocator, &client, version_dir, version);
 }
 
 fn ensureInstallAllowed(version: []const u8) !void {

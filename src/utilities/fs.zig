@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const fs = std.fs;
 const mem = std.mem;
 const env_utils = @import("env.zig");
+const fs_utils = @import("fs.zig");
 
 pub fn pathExists(path: []const u8) bool {
     fs.accessAbsolute(path, .{}) catch return false;
@@ -44,10 +45,15 @@ pub fn makeDirAbsolute(path: []const u8) !void {
 }
 
 pub fn ensureDirAbsolute(path: []const u8) !void {
-    fs.makeDirAbsolute(path) catch |err| switch (err) {
-        error.PathAlreadyExists => {},
-        else => return err,
-    };
+    std.debug.assert(fs.path.isAbsolute(path));
+
+    var it = try fs.path.componentIterator(path);
+    while (it.next()) |component| {
+        fs.makeDirAbsolute(component.path) catch |err| switch (err) {
+            error.PathAlreadyExists => {},
+            else => return err,
+        };
+    }
 }
 
 pub fn joinPath(allocator: mem.Allocator, parts: []const []const u8) ![]u8 {
@@ -83,7 +89,7 @@ pub fn getTempDir(allocator: mem.Allocator) ![]u8 {
     return allocator.dupe(u8, "/tmp");
 }
 
-pub fn getBunvInstallDir(allocator: mem.Allocator, is_debug: bool) ![]const u8 {
+pub fn getBunvInstallDir(allocator: mem.Allocator) ![]const u8 {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
 
@@ -92,31 +98,36 @@ pub fn getBunvInstallDir(allocator: mem.Allocator, is_debug: bool) ![]const u8 {
     const user_home_dir = try env_utils.getUserHomeDir(allocator);
     defer allocator.free(user_home_dir);
 
-    if (is_debug) std.debug.print("User Home Dir: {s}\n", .{user_home_dir});
-
     const bunv_install_dir = try joinPath(allocator, &[_][]const u8{ user_home_dir, bunv_install });
-
-    if (is_debug) std.debug.print("Bunv Install Dir: {s}\n", .{bunv_install_dir});
 
     return bunv_install_dir;
 }
 
-pub fn getBunvVersionsDir(allocator: mem.Allocator, install_dir: []const u8) ![]u8 {
+pub fn getBunvVersionsDir(allocator: mem.Allocator) ![]u8 {
+    const install_dir = try fs_utils.getBunvInstallDir(allocator);
+    defer allocator.free(install_dir);
     return try joinPath(allocator, &[_][]const u8{ install_dir, "versions" });
 }
 
-pub fn getBunVersionDir(allocator: mem.Allocator, install_dir: []const u8, version: []const u8) ![]u8 {
+pub fn getBunVersionDir(allocator: mem.Allocator, version: []const u8) ![]u8 {
+    const install_dir = try fs_utils.getBunvInstallDir(allocator);
+    defer allocator.free(install_dir);
     return try joinPath(allocator, &[_][]const u8{ install_dir, "versions", version });
 }
 
-pub fn getBunBinaryPath(allocator: mem.Allocator, install_dir: []const u8) ![]u8 {
+pub fn getBunBinPath(allocator: mem.Allocator, version: []const u8) ![]u8 {
+    const install_dir = try fs_utils.getBunvInstallDir(allocator);
+    defer allocator.free(install_dir);
+    var bin_name = "bun";
     if (builtin.os.tag == .windows) {
-        return try joinPath(allocator, &[_][]const u8{ install_dir, "bin", "bun.exe" });
+        bin_name = "bun.exe";
     }
-    return try joinPath(allocator, &[_][]const u8{ install_dir, "bin", "bun" });
+    return try joinPath(allocator, &[_][]const u8{ install_dir, "versions", version, "bin", bin_name });
 }
 
-pub fn getBunGlobalPackagesDir(allocator: mem.Allocator, install_dir: []const u8, version: []const u8) ![]u8 {
+pub fn getBunGlobalPackagesDir(allocator: mem.Allocator, version: []const u8) ![]u8 {
+    const install_dir = try fs_utils.getBunvInstallDir(allocator);
+    defer allocator.free(install_dir);
     return try joinPath(allocator, &[_][]const u8{ install_dir, "versions", version, "install", "global" });
 }
 

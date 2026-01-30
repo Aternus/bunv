@@ -57,10 +57,10 @@ const Report = struct {
     }
 };
 
-pub fn run(allocator: mem.Allocator, install_dir: []const u8, args: []const []const u8) !void {
+pub fn run(allocator: mem.Allocator, args: []const []const u8) !void {
     const options = try parseArgs(allocator, args);
 
-    var report = try scanAll(allocator, install_dir);
+    var report = try scanAll(allocator);
     defer report.deinit(allocator);
 
     try printReport(allocator, report);
@@ -104,20 +104,20 @@ fn printHelp() void {
     std.debug.print("  --yes, -y    Skip confirmation prompt\n\n", .{});
 }
 
-fn scanAll(allocator: mem.Allocator, bunv_install_dir: []const u8) !Report {
+fn scanAll(allocator: mem.Allocator) !Report {
     var report = Report.init(allocator);
     errdefer report.deinit(allocator);
 
-    try findBunvInstalls(allocator, bunv_install_dir, &report);
-    try findOfficialInstall(allocator, bunv_install_dir, &report);
+    try findBunvInstalls(allocator, &report);
+    try findOfficialInstall(allocator, &report);
 
     return report;
 }
 
 fn printReport(allocator: mem.Allocator, report: Report) !void {
     _ = allocator;
-    printSection(report.items, .bunv, "Bunv managed installations", c.bold);
-    printSection(report.items, .official, "Official installer installations", c.bold);
+    printSection(report.items, .bunv, "Bunv installations", c.bold);
+    printSection(report.items, .official, "Bun official installations", c.bold);
     std.debug.print("\n", .{});
 }
 
@@ -194,15 +194,15 @@ fn executeActions(items: []Item) !void {
     if (failed) std.process.exit(1);
 }
 
-fn findBunvInstalls(allocator: mem.Allocator, bunv_install_dir: []const u8, report: *Report) !void {
-    const installed_versions = try vm.getInstalledVersions(allocator, bunv_install_dir);
+fn findBunvInstalls(allocator: mem.Allocator, report: *Report) !void {
+    const installed_versions = try vm.getInstalledVersions(allocator);
     defer {
         for (installed_versions.items) |item| allocator.free(item);
         installed_versions.deinit();
     }
 
     for (installed_versions.items) |version| {
-        const version_dir = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
+        const version_dir = try fs_utils.getBunVersionDir(allocator, version);
         errdefer allocator.free(version_dir);
         var paths = std.array_list.Managed([]const u8).init(allocator);
         try paths.append(try allocator.dupe(u8, version_dir));
@@ -220,77 +220,30 @@ fn findBunvInstalls(allocator: mem.Allocator, bunv_install_dir: []const u8, repo
     }
 }
 
-fn findOfficialInstall(allocator: mem.Allocator, bunv_install_dir: []const u8, report: *Report) !void {
+fn findOfficialInstall(allocator: mem.Allocator, report: *Report) !void {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
 
     const home_dir = try env_utils.getUserHomeDir(allocator);
     defer allocator.free(home_dir);
 
-    const candidates = try officialInstallCandidates(allocator, env_map, home_dir);
-    defer {
-        for (candidates.items) |path| allocator.free(path);
-        candidates.deinit();
-    }
+    const install_dir = env_map.get("BUN_INSTALL") orelse try fs_utils.joinPath(allocator, &[_][]const u8{ home_dir, ".bun" });
+    defer allocator.free(install_dir);
 
-    for (candidates.items) |install_dir| {
-        if (mem.startsWith(u8, install_dir, bunv_install_dir)) continue;
+    const install_dir_exists = fs_utils.dirExists(install_dir);
+    if (!install_dir_exists) return;
 
-        const bin = try fs_utils.getBunBinaryPath(allocator, install_dir);
-        defer allocator.free(bin);
-        const install_dir_exists = fs_utils.dirExists(install_dir);
-        const bin_exists = fs_utils.pathExists(bin);
-        if (!install_dir_exists and !bin_exists) continue;
+    var paths = std.array_list.Managed([]const u8).init(allocator);
+    try paths.append(try allocator.dupe(u8, install_dir));
 
-        var paths = std.array_list.Managed([]const u8).init(allocator);
-        try paths.append(try allocator.dupe(u8, install_dir));
-        if (bin_exists) {
-            try paths.append(try allocator.dupe(u8, bin));
-        }
+    const warning = try allocator.dupe(u8, "Shell profile edits (BUN_INSTALL/PATH) may need manual cleanup");
 
-        const warning = if (!bin_exists)
-            try allocator.dupe(u8, "bun binary not found; removing install dir only")
-        else
-            try allocator.dupe(u8, "Shell profile edits (BUN_INSTALL/PATH) may need manual cleanup");
-
-        const item = Item{
-            .source = .official,
-            .label = try allocator.dupe(u8, "Official installer"),
-            .paths = paths,
-            .action = .{ .delete_tree = try allocator.dupe(u8, install_dir) },
-            .warning = warning,
-        };
-        try report.append(item);
-    }
-}
-
-fn officialInstallCandidates(
-    allocator: mem.Allocator,
-    env_map: std.process.EnvMap,
-    user_home_dir: []const u8,
-) !std.array_list.Managed([]const u8) {
-    var candidates = std.array_list.Managed([]const u8).init(allocator);
-    errdefer {
-        for (candidates.items) |path| allocator.free(path);
-        candidates.deinit();
-    }
-
-    if (env_map.get("BUN_INSTALL")) |bun_install| {
-        try candidates.append(try allocator.dupe(u8, bun_install));
-    }
-
-    const default_install = try fs_utils.joinPath(allocator, &[_][]const u8{ user_home_dir, ".bun" });
-    defer allocator.free(default_install);
-    if (!containsPath(candidates.items, default_install)) {
-        try candidates.append(try allocator.dupe(u8, default_install));
-    }
-
-    return candidates;
-}
-
-fn containsPath(paths: []const []const u8, path: []const u8) bool {
-    for (paths) |existing| {
-        if (mem.eql(u8, existing, path)) return true;
-    }
-    return false;
+    const item = Item{
+        .source = .official,
+        .label = try allocator.dupe(u8, "Unknown version"),
+        .paths = paths,
+        .action = .{ .delete_tree = try allocator.dupe(u8, install_dir) },
+        .warning = warning,
+    };
+    try report.append(item);
 }

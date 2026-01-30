@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub fn randomHexLower(allocator: std.mem.Allocator, bytes_len: usize) ![]u8 {
+pub fn getRandomHexLower(allocator: std.mem.Allocator, bytes_len: usize) ![]u8 {
     const bytes = try allocator.alloc(u8, bytes_len);
     defer allocator.free(bytes);
     std.crypto.random.bytes(bytes);
@@ -13,7 +13,11 @@ pub fn randomHexLower(allocator: std.mem.Allocator, bytes_len: usize) ![]u8 {
     return out;
 }
 
-pub fn sha256File(path: []const u8) ![32]u8 {
+fn toHexLower(n: u8) u8 {
+    return if (n < 10) '0' + n else 'a' + (n - 10);
+}
+
+pub fn getSha256ForFile(path: []const u8) ![32]u8 {
     var file = try std.fs.openFileAbsolute(path, .{});
     defer file.close();
 
@@ -29,8 +33,4 @@ pub fn sha256File(path: []const u8) ![32]u8 {
     var out: [32]u8 = undefined;
     hasher.final(&out);
     return out;
-}
-
-fn toHexLower(n: u8) u8 {
-    return if (n < 10) '0' + n else 'a' + (n - 10);
 }

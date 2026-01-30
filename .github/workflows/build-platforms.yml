@@ -33,7 +33,7 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      - run: zig build --summary all -Doptimize=ReleaseFast -Dtarget=${{matrix.arch}}-${{matrix.os}}
+      - run: zig build --summary all -Doptimize=ReleaseSafe -Dtarget=${{matrix.arch}}-${{matrix.os}}
 
       - if: matrix.runner == 'macos-latest'
         uses: apple-actions/import-codesign-certs@v3

@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="run:bun" type="ZIGBRAINS_RUN" factoryName="ZIGBRAINS_RUN">
+    <ZigBrainsOption name="workingDirectory" value="$PROJECT_DIR$" />
+    <envs>
+      <env name="DEBUG" value="bunv" />
+    </envs>
+    <ZigBrainsOption name="filePath" value="$PROJECT_DIR$/src/bun.zig" />
+    <ZigBrainsNestedOption name="optimization">
+      <ZigBrainsOption name="level" value="Debug" />
+      <ZigBrainsOption name="forced" value="false" />
+    </ZigBrainsNestedOption>
+    <ZigBrainsOption name="compilerArgs" value="" />
+    <ZigBrainsOption name="exeArgs" value="" />
+    <method v="2" />
+  </configuration>
+</component>

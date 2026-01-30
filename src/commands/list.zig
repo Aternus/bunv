@@ -4,8 +4,8 @@ const vm = @import("../utilities/vm.zig");
 const c = @import("../utilities/colors.zig");
 const fs_utils = @import("../utilities/fs.zig");
 
-pub fn run(allocator: mem.Allocator, install_dir: []const u8) !void {
-    const installed_versions = try vm.getInstalledVersions(allocator, install_dir);
+pub fn run(allocator: mem.Allocator) !void {
+    const installed_versions = try vm.getInstalledVersions(allocator);
     defer {
         for (installed_versions.items) |item| {
             allocator.free(item);
@@ -13,23 +13,23 @@ pub fn run(allocator: mem.Allocator, install_dir: []const u8) !void {
         installed_versions.deinit();
     }
 
-    try printInstalledVersions(allocator, install_dir, installed_versions);
+    try printInstalledVersions(allocator, installed_versions);
 }
 
-fn printInstalledVersions(allocator: mem.Allocator, bunv_install_dir: []const u8, versions: std.array_list.Managed([]const u8)) !void {
+fn printInstalledVersions(allocator: mem.Allocator, versions: std.array_list.Managed([]const u8)) !void {
     std.debug.print("{s}Installed versions:{s}\n", .{ c.bold, c.reset });
     if (versions.items.len == 0) {
         std.debug.print("  {s}No versions installed{s}\n", .{ c.yellow, c.reset });
         return;
     }
     for (versions.items) |version| {
-        const version_dir = try fs_utils.getBunVersionDir(allocator, bunv_install_dir, version);
+        const version_dir = try fs_utils.getBunVersionDir(allocator, version);
         defer allocator.free(version_dir);
 
-        const bin_path = try fs_utils.getBunBinaryPath(allocator, version_dir);
+        const bin_path = try fs_utils.getBunBinPath(allocator, version);
         defer allocator.free(bin_path);
 
-        const global_packages_dir = try fs_utils.getBunGlobalPackagesDir(allocator, bunv_install_dir, version);
+        const global_packages_dir = try fs_utils.getBunGlobalPackagesDir(allocator, version);
         defer allocator.free(global_packages_dir);
 
         std.debug.print("  {s}{s}v{s}{s}\n", .{ c.bold, c.blue, version, c.reset });

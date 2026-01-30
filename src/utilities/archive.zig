@@ -8,7 +8,7 @@ pub fn extractBunFromZip(allocator: mem.Allocator, archive_path: []const u8, bin
     const temp_dir = try fs_utils.getTempDir(allocator);
     defer allocator.free(temp_dir);
 
-    const rand_hex = try crypto_utils.randomHexLower(allocator, 8);
+    const rand_hex = try crypto_utils.getRandomHexLower(allocator, 8);
     defer allocator.free(rand_hex);
 
     const extract_name = try std.fmt.allocPrint(allocator, "bunv-extract-{s}", .{rand_hex});
@@ -59,6 +59,7 @@ pub fn extractBunFromZip(allocator: mem.Allocator, archive_path: []const u8, bin
         std.debug.print("Failed to locate {s} in downloaded archive\n", .{bun_name});
         return error.BunBinaryNotFound;
     };
+    defer allocator.free(rel_path);
 
     var src = try dir.openFile(rel_path, .{});
     defer src.close();

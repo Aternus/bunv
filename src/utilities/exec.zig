@@ -25,20 +25,14 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
         std.process.exit(0);
     }
 
-    const install_dir = try fs_utils.getBunvInstallDir(allocator, is_debug);
-    defer allocator.free(install_dir);
-
     const project_version = try vm.getProjectVersion(allocator, is_debug) orelse
-        try vm.getLatestLocalVersion(allocator, is_debug, install_dir) orelse
+        try vm.getLatestLocalVersion(allocator, is_debug) orelse
         try vm.getLatestRemoteVersion(allocator, is_debug);
     defer allocator.free(project_version);
 
-    try vm.ensureVersionInstalled(allocator, install_dir, project_version);
+    try vm.ensureVersionInstalled(allocator, project_version);
 
-    const version_dir = try fs_utils.getBunVersionDir(allocator, install_dir, project_version);
-    defer allocator.free(version_dir);
-
-    const bin_path = try fs_utils.getBunBinaryPath(allocator, version_dir);
+    const bin_path = try fs_utils.getBunBinPath(allocator, project_version);
     defer allocator.free(bin_path);
 
     var new_args = try std.array_list.Managed([]const u8).initCapacity(allocator, 5);
@@ -57,9 +51,11 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
         std.debug.print("---\n", .{});
     }
 
+    const version_dir = try fs_utils.getBunVersionDir(allocator, project_version);
+    defer allocator.free(version_dir);
+
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
-
     try env_map.put("BUN_INSTALL", version_dir);
 
     return runBunCmd(allocator, new_args.items, &env_map);

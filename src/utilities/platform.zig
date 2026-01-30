@@ -17,7 +17,7 @@ pub const TargetOptions = struct {
     has_avx2: bool,
 };
 
-pub fn buildTargetFromOptions(allocator: mem.Allocator, opts: TargetOptions) !TargetSelection {
+fn buildTargetFromOptions(allocator: mem.Allocator, opts: TargetOptions) !TargetSelection {
     const os_part = switch (opts.os_tag) {
         .macos => "darwin",
         .linux => "linux",
@@ -57,24 +57,6 @@ pub fn buildTargetFromOptions(allocator: mem.Allocator, opts: TargetOptions) !Ta
     };
 }
 
-pub fn resolveBunTarget(allocator: mem.Allocator) !TargetSelection {
-    const is_musl = builtin.os.tag == .linux and isAlpineLinux();
-    const is_rosetta = builtin.os.tag == .macos and builtin.cpu.arch == .x86_64 and isRosettaTranslated(allocator);
-
-    var has_avx2 = true;
-    if (builtin.cpu.arch == .x86_64 and (builtin.os.tag == .linux or builtin.os.tag == .macos) and !is_rosetta) {
-        has_avx2 = detectAvx2(allocator);
-    }
-
-    return buildTargetFromOptions(allocator, .{
-        .os_tag = builtin.os.tag,
-        .cpu_arch = builtin.cpu.arch,
-        .is_musl = is_musl,
-        .is_rosetta = is_rosetta,
-        .has_avx2 = has_avx2,
-    });
-}
-
 fn isAlpineLinux() bool {
     if (builtin.os.tag != .linux) return false;
     return fs_utils.fileExists("/etc/alpine-release") catch false;
@@ -112,4 +94,22 @@ fn hasAvx2Linux(allocator: mem.Allocator) bool {
 
 fn hasAvx2Mac(allocator: mem.Allocator) bool {
     return process_utils.commandOutputEquals(allocator, &[_][]const u8{ "sysctl", "-n", "hw.optional.avx2_0" }, "1");
+}
+
+pub fn resolveBunTarget(allocator: mem.Allocator) !TargetSelection {
+    const is_musl = builtin.os.tag == .linux and isAlpineLinux();
+    const is_rosetta = builtin.os.tag == .macos and builtin.cpu.arch == .x86_64 and isRosettaTranslated(allocator);
+
+    var has_avx2 = true;
+    if (builtin.cpu.arch == .x86_64 and (builtin.os.tag == .linux or builtin.os.tag == .macos) and !is_rosetta) {
+        has_avx2 = detectAvx2(allocator);
+    }
+
+    return buildTargetFromOptions(allocator, .{
+        .os_tag = builtin.os.tag,
+        .cpu_arch = builtin.cpu.arch,
+        .is_musl = is_musl,
+        .is_rosetta = is_rosetta,
+        .has_avx2 = has_avx2,
+    });
 }

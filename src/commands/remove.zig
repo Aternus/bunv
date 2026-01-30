@@ -5,8 +5,8 @@ const vm = @import("../utilities/vm.zig");
 const output = @import("../cli/output.zig");
 const c = @import("../utilities/colors.zig");
 
-pub fn run(allocator: mem.Allocator, install_dir: []const u8, version: []const u8) !void {
-    const installed_versions = try vm.getInstalledVersions(allocator, install_dir);
+pub fn run(allocator: mem.Allocator, version: []const u8) !void {
+    const installed_versions = try vm.getInstalledVersions(allocator);
     defer {
         for (installed_versions.items) |item| {
             allocator.free(item);
@@ -26,7 +26,7 @@ pub fn run(allocator: mem.Allocator, install_dir: []const u8, version: []const u
         output.fatalFmt("Bun v{s} is not installed", .{version});
     }
 
-    const version_dir = try fs_utils.getBunVersionDir(allocator, install_dir, version);
+    const version_dir = try fs_utils.getBunVersionDir(allocator, version);
     defer allocator.free(version_dir);
 
     printRemovingVersion(version);

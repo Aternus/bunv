@@ -67,7 +67,7 @@ brew install simnalamburt/x/bunv
 2. Install [Zig](https://ziglang.org/) (0.15.2)
 3. Build the executables (`bun`, `bunx`, `bunv`)
    ```sh
-   zig build -Doptimize=ReleaseFast --prefix ~/.bunv
+   zig build -Doptimize=ReleaseSafe --prefix ~/.bunv
    ```
 4. Add `~/.bunv/bin` to your path:
    ```sh
@@ -251,7 +251,7 @@ $ ./zig-out/bin/bunx --version
 $ ./zig-out/bin/bunv help
 
 # Build and install production executables to ~/.bunv/bin
-$ zig build -Doptimize=ReleaseFast --prefix ~/.bunv
+$ zig build -Doptimize=ReleaseSafe --prefix ~/.bunv
 ```
 
 ## Release

@@ -621,6 +621,10 @@
     {
       "project": 5,
       "lazy": false
+    },
+    {
+      "project": 6,
+      "lazy": false
     }
   ]
 }]]><![CDATA[{
@@ -799,6 +803,24 @@
       ]
     }
   ],
+  "dependencies": []
+}]]><![CDATA[{
+  "name": "tracy",
+  "version": null,
+  "path": "/Users/kreznik/.cache/zig/p/N-V-__8AAMeOlQEipHjcyu0TCftdAi9AQe7EXUDJOoVe0k-t",
+  "steps": [
+    {
+      "name": "install",
+      "description": "Copy build artifacts to prefix path",
+      "kind": "uninstall"
+    },
+    {
+      "name": "uninstall",
+      "description": "Remove build artifacts from prefix path",
+      "kind": "uninstall"
+    }
+  ],
+  "modules": [],
   "dependencies": []
 }]]></list>
     </option>
