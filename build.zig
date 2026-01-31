@@ -36,6 +36,10 @@ fn addLinter(b: *std.Build) !void {
 
     var zbuilder = zlinter.builder(b, .{});
     inline for (std.meta.fields(zlinter.BuiltinLintRule)) |f| {
+        // excludes
+        const is_require_doc_comment = comptime std.mem.eql(u8, f.name, "require_doc_comment");
+        if (is_require_doc_comment) continue;
+
         const rule = @field(zlinter.BuiltinLintRule, f.name);
         zbuilder.addRule(.{ .builtin = rule }, .{});
     }
