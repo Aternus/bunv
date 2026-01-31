@@ -5,14 +5,14 @@ const builtin = @import("builtin");
 const debug = @import("debug.zig");
 const env_utils = @import("env.zig");
 const fs_utils = @import("fs.zig");
-const vm = @import("vm.zig");
+const vm_utils = @import("vm.zig");
 
 pub const Cmd = enum {
     bun,
     bunx,
 };
 
-pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
+pub fn run(allocator: mem.Allocator, cmd: Cmd) anyerror!void {
     const is_debug = try env_utils.isDebug(allocator);
     if (is_debug) std.debug.print("Executable: {}\n", .{cmd});
 
@@ -25,24 +25,24 @@ pub fn run(allocator: mem.Allocator, cmd: Cmd) !void {
         std.process.exit(0);
     }
 
-    const project_version = try vm.getProjectVersion(allocator, is_debug) orelse
-        try vm.getLatestLocalVersion(allocator, is_debug) orelse
-        try vm.getLatestRemoteVersion(allocator, is_debug);
+    const project_version = try vm_utils.getProjectVersion(allocator, is_debug) orelse
+        try vm_utils.getLatestLocalVersion(allocator, is_debug) orelse
+        try vm_utils.getLatestRemoteVersion(allocator, is_debug);
     defer allocator.free(project_version);
 
-    try vm.ensureVersionInstalled(allocator, project_version);
+    try vm_utils.ensureVersionInstalled(allocator, project_version);
 
     const bin_path = try fs_utils.getBunBinPath(allocator, project_version);
     defer allocator.free(bin_path);
 
-    var new_args = try std.array_list.Managed([]const u8).initCapacity(allocator, 5);
-    defer new_args.deinit();
+    var new_args = try std.ArrayList([]const u8).initCapacity(allocator, 5);
+    defer new_args.deinit(allocator);
 
-    try new_args.append(bin_path);
-    if (cmd == .bunx) try new_args.append("x");
+    try new_args.append(allocator, bin_path);
+    if (cmd == .bunx) try new_args.append(allocator, "x");
 
     for (args[1..]) |arg| {
-        try new_args.append(arg);
+        try new_args.append(allocator, arg);
     }
 
     if (is_debug) {

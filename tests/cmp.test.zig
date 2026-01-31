@@ -4,18 +4,18 @@ const cmp = @import("tests").cmp;
 test "cmp.semVerDESC" {
     const allocator = std.testing.allocator;
 
-    var versions = std.array_list.Managed([]const u8).init(allocator);
+    var versions = std.ArrayList([]const u8).empty;
     defer {
         for (versions.items) |v| allocator.free(v);
-        versions.deinit();
+        versions.deinit(allocator);
     }
 
-    try versions.append(try allocator.dupe(u8, "1.2.0"));
-    try versions.append(try allocator.dupe(u8, "1.2.0-canary.2"));
-    try versions.append(try allocator.dupe(u8, "1.2.0-canary.10"));
-    try versions.append(try allocator.dupe(u8, "1.10.0"));
-    try versions.append(try allocator.dupe(u8, "2.0.0-rc.1"));
-    try versions.append(try allocator.dupe(u8, "2.0.0"));
+    try versions.append(allocator, try allocator.dupe(u8, "1.2.0"));
+    try versions.append(allocator, try allocator.dupe(u8, "1.2.0-canary.2"));
+    try versions.append(allocator, try allocator.dupe(u8, "1.2.0-canary.10"));
+    try versions.append(allocator, try allocator.dupe(u8, "1.10.0"));
+    try versions.append(allocator, try allocator.dupe(u8, "2.0.0-rc.1"));
+    try versions.append(allocator, try allocator.dupe(u8, "2.0.0"));
 
     std.sort.heap([]const u8, versions.items, {}, cmp.semVerDESC);
 

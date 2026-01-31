@@ -7,7 +7,7 @@ const bun = "bun";
 const bunx = "bunx";
 const bunv = "bunv";
 
-pub fn build(b: *std.Build) !void {
+pub fn build(b: *std.Build) anyerror!void {
     const required_zig_version = try std.SemanticVersion.parse("0.15.2");
     if (std.SemanticVersion.order(builtin.zig_version, required_zig_version) != .eq) {
         std.debug.print("Zig 0.15.2 toolchain is required to build Bunv, got {f}", .{builtin.zig_version});
@@ -18,7 +18,7 @@ pub fn build(b: *std.Build) !void {
     const optimize = b.standardOptimizeOption(.{});
 
     const version_json = @embedFile("package.json");
-    var parsed = json.parseFromSlice(std.json.Value, b.allocator, version_json, .{}) catch unreachable;
+    var parsed = try json.parseFromSlice(std.json.Value, b.allocator, version_json, .{});
     defer parsed.deinit();
     const version_str = parsed.value.object.get("version").?.string;
     const version = try std.SemanticVersion.parse(version_str);
@@ -31,7 +31,7 @@ pub fn build(b: *std.Build) !void {
     addExe(b, target, optimize, version, bunv);
 }
 
-fn addLinter(b: *std.Build) !void {
+fn addLinter(b: *std.Build) anyerror!void {
     const lint_step = b.step("lint", "Lint source code");
 
     var zbuilder = zlinter.builder(b, .{});
@@ -47,7 +47,7 @@ fn addLinter(b: *std.Build) !void {
     lint_step.dependOn(zbuilder.build());
 }
 
-fn addUnitTests(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) !void {
+fn addUnitTests(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) anyerror!void {
     const test_step = b.step("test", "Run unit tests");
 
     var test_dir = try b.build_root.handle.openDir("tests", .{ .iterate = true });
@@ -59,10 +59,10 @@ fn addUnitTests(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.b
         .optimize = optimize,
     });
 
-    var test_files = std.array_list.Managed([]const u8).init(b.allocator);
+    var test_files = std.ArrayList([]const u8).empty;
     defer {
         for (test_files.items) |path| b.allocator.free(path);
-        test_files.deinit();
+        test_files.deinit(b.allocator);
     }
 
     var it = test_dir.iterate();
@@ -71,16 +71,16 @@ fn addUnitTests(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.b
         if (!std.mem.endsWith(u8, entry.name, ".test.zig")) continue;
 
         const path = try std.fmt.allocPrint(b.allocator, "tests/{s}", .{entry.name});
-        try test_files.append(path);
+        try test_files.append(b.allocator, path);
     }
 
-    const Ctx = struct {};
+    const ctx = struct {};
     const lessThan = struct {
-        fn less(_: Ctx, a: []const u8, b2: []const u8) bool {
+        fn less(_: ctx, a: []const u8, b2: []const u8) bool {
             return std.mem.lessThan(u8, a, b2);
         }
     }.less;
-    std.sort.heap([]const u8, test_files.items, Ctx{}, lessThan);
+    std.sort.heap([]const u8, test_files.items, ctx{}, lessThan);
 
     for (test_files.items) |test_file| {
         const unit_tests = b.addTest(.{

@@ -6,11 +6,11 @@ const output = @import("../cli/output.zig");
 const prune_cmd = @import("prune.zig");
 const remove_cmd = @import("remove.zig");
 
-pub fn dispatch(allocator: mem.Allocator, parsedArgs: cli_args.ParsedArgs) !void {
-    switch (parsedArgs.command) {
+pub fn dispatch(allocator: mem.Allocator, parsed_args: cli_args.ParsedArgs) anyerror!void {
+    switch (parsed_args.command) {
         .list => try list_cmd.run(allocator),
-        .remove => try remove_cmd.run(allocator, parsedArgs.version.?),
-        .prune => try prune_cmd.run(allocator, parsedArgs.prune_args),
+        .remove => try remove_cmd.run(allocator, parsed_args.version.?),
+        .prune => try prune_cmd.run(allocator, parsed_args.prune_args),
         .help => output.printHelp(),
     }
 }

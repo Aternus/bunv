@@ -4,7 +4,7 @@ const builtin = @import("builtin");
 const crypto_utils = @import("crypto.zig");
 const fs_utils = @import("fs.zig");
 
-pub fn extractBunFromZip(allocator: mem.Allocator, archive_path: []const u8, bin_path: []const u8) !void {
+pub fn extractBunFromZip(allocator: mem.Allocator, archive_path: []const u8, bin_path: []const u8) anyerror!void {
     const temp_dir = try fs_utils.getTempDir(allocator);
     defer allocator.free(temp_dir);
 
@@ -16,7 +16,9 @@ pub fn extractBunFromZip(allocator: mem.Allocator, archive_path: []const u8, bin
 
     const extract_dir = try fs_utils.joinPath(allocator, &[_][]const u8{ temp_dir, extract_name });
     defer allocator.free(extract_dir);
-    errdefer fs_utils.deleteTreeAbsolute(extract_dir) catch {};
+    errdefer fs_utils.deleteTreeAbsolute(extract_dir) catch |err| {
+        std.debug.print("Failed to clean up temp directory: {s}\n", .{@errorName(err)});
+    };
 
     try fs_utils.ensureDirAbsolute(extract_dir);
 
@@ -67,12 +69,15 @@ pub fn extractBunFromZip(allocator: mem.Allocator, archive_path: []const u8, bin
     var dest = try std.fs.createFileAbsolute(bin_path, .{ .truncate = true });
     defer dest.close();
 
-    var buf: [64 * 1024]u8 = undefined;
+    var buf = std.mem.zeroes([64 * 1024]u8);
+    var writer_buffer = std.mem.zeroes([8 * 1024]u8);
+    var writer = dest.writer(&writer_buffer);
     while (true) {
-        const n = try src.read(&buf);
-        if (n == 0) break;
-        try dest.writeAll(buf[0..n]);
+        const bytes_read = try src.read(&buf);
+        if (bytes_read == 0) break;
+        try writer.interface.writeAll(buf[0..bytes_read]);
     }
+    try writer.interface.flush();
 
     if (builtin.os.tag != .windows) {
         try dest.chmod(0o755);

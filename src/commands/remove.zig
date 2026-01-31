@@ -3,15 +3,15 @@ const mem = std.mem;
 const c = @import("../utilities/colors.zig");
 const fs_utils = @import("../utilities/fs.zig");
 const output = @import("../cli/output.zig");
-const vm = @import("../utilities/vm.zig");
+const vm_utils = @import("../utilities/vm.zig");
 
-pub fn run(allocator: mem.Allocator, version: []const u8) !void {
-    const installed_versions = try vm.getInstalledVersions(allocator);
+pub fn run(allocator: mem.Allocator, version: []const u8) anyerror!void {
+    var installed_versions = try vm_utils.getInstalledVersions(allocator);
     defer {
         for (installed_versions.items) |item| {
             allocator.free(item);
         }
-        installed_versions.deinit();
+        installed_versions.deinit(allocator);
     }
 
     var version_exists = false;

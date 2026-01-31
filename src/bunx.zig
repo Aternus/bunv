@@ -1,8 +1,8 @@
 const exec_utils = @import("utilities/exec.zig");
 const std = @import("std");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+pub fn main() anyerror!void {
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
 
     const allocator = gpa.allocator();

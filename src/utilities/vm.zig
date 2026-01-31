@@ -13,7 +13,7 @@ const VersionFile = struct {
     extractBunVersion: *const fn (allocator: mem.Allocator, contents: []u8) ?[]const u8,
 };
 
-const PackageJsonVersionFile = struct {
+const package_json_version_file = struct {
     fn init() VersionFile {
         return .{
             .name = "package.json",
@@ -37,7 +37,7 @@ const PackageJsonVersionFile = struct {
     }
 };
 
-const BunVersionFile = struct {
+const bun_version_file = struct {
     fn init() VersionFile {
         return .{
             .name = ".bun-version",
@@ -51,7 +51,7 @@ const BunVersionFile = struct {
     }
 };
 
-const ToolVersionsFile = struct {
+const tool_versions_file = struct {
     fn init() VersionFile {
         return .{
             .name = ".tool-versions",
@@ -79,11 +79,15 @@ const ToolVersionsFile = struct {
     }
 };
 
-pub fn getInstalledVersions(allocator: mem.Allocator) !std.array_list.Managed([]const u8) {
+pub fn getInstalledVersions(allocator: mem.Allocator) anyerror!std.ArrayList([]const u8) {
     const versions_dir_path = try fs_utils.getBunvVersionsDir(allocator);
     defer allocator.free(versions_dir_path);
 
-    var result = std.array_list.Managed([]const u8).init(allocator);
+    var result = std.ArrayList([]const u8).empty;
+    errdefer {
+        for (result.items) |item| allocator.free(item);
+        result.deinit(allocator);
+    }
 
     var versions_dir = fs_utils.openDirAbsolute(versions_dir_path, .{ .iterate = true }) catch |err| switch (err) {
         error.FileNotFound => return result,
@@ -106,7 +110,7 @@ pub fn getInstalledVersions(allocator: mem.Allocator) !std.array_list.Managed([]
         defer allocator.free(bin);
 
         if (try fs_utils.fileExists(bin)) {
-            try result.append(version);
+            try result.append(allocator, version);
         } else {
             allocator.free(version);
         }
@@ -116,13 +120,13 @@ pub fn getInstalledVersions(allocator: mem.Allocator) !std.array_list.Managed([]
     return result;
 }
 
-pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 {
+pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) anyerror!?[]const u8 {
     if (is_debug) std.debug.print("Figuring out the Bun version required for the project...\n", .{});
 
     const files = comptime [_]VersionFile{
-        PackageJsonVersionFile.init(),
-        BunVersionFile.init(),
-        ToolVersionsFile.init(),
+        package_json_version_file.init(),
+        bun_version_file.init(),
+        tool_versions_file.init(),
     };
 
     var current_dir = try fs_utils.realpathAlloc(allocator, ".");
@@ -144,8 +148,14 @@ pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 
             const buffer = try allocator.alloc(u8, file_size);
             defer allocator.free(buffer);
 
-            _ = try file.readAll(buffer);
-            if (version_file.extractBunVersion(allocator, buffer)) |version| {
+            var total_read: usize = 0;
+            while (total_read < buffer.len) {
+                const amt = try file.read(buffer[total_read..]);
+                if (amt == 0) break;
+                total_read += amt;
+            }
+
+            if (version_file.extractBunVersion(allocator, buffer[0..total_read])) |version| {
                 if (is_debug) std.debug.print("  Found v{s} in: {s}\n", .{ version, file_path });
                 return try allocator.dupe(u8, version);
             }
@@ -162,15 +172,15 @@ pub fn getProjectVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 
     return null;
 }
 
-pub fn getLatestLocalVersion(allocator: mem.Allocator, is_debug: bool) !?[]const u8 {
+pub fn getLatestLocalVersion(allocator: mem.Allocator, is_debug: bool) anyerror!?[]const u8 {
     if (is_debug) std.debug.print("Figuring out the latest Bun version installed locally...\n", .{});
 
-    const installed_versions = try getInstalledVersions(allocator);
+    var installed_versions = try getInstalledVersions(allocator);
     defer {
         for (installed_versions.items) |item| {
             allocator.free(item);
         }
-        installed_versions.deinit();
+        installed_versions.deinit(allocator);
     }
 
     if (is_debug) std.debug.print("{d} versions: {any}\n", .{ installed_versions.items.len, installed_versions.items });
@@ -181,7 +191,7 @@ pub fn getLatestLocalVersion(allocator: mem.Allocator, is_debug: bool) !?[]const
     return try allocator.dupe(u8, installed_versions.items[0]);
 }
 
-pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) ![]const u8 {
+pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) anyerror![]const u8 {
     if (is_debug) std.debug.print("Figuring out the latest Bun version on the remote server...\n", .{});
 
     var client = http.Client{ .allocator = allocator };
@@ -202,9 +212,9 @@ pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) ![]const
 
     try req.sendBodiless();
 
-    var redirect_buffer: [8 * 1024]u8 = undefined;
+    var redirect_buffer = std.mem.zeroes([8 * 1024]u8);
     var response = try req.receiveHead(&redirect_buffer);
-    var transfer_buffer: [4 * 1024]u8 = undefined;
+    var transfer_buffer = std.mem.zeroes([4 * 1024]u8);
     const reader = response.reader(&transfer_buffer);
     const body = try reader.allocRemaining(allocator, .limited(1024 * 1024 * 4));
     defer allocator.free(body);
@@ -216,14 +226,14 @@ pub fn getLatestRemoteVersion(allocator: mem.Allocator, is_debug: bool) ![]const
 
     const release = parsed.value.object.get("release").?.object;
     // "bun-v1.1.27"
-    const gitTag = release.get("tag").?.string;
+    const git_tag = release.get("tag").?.string;
 
     // strip off "bun-v"
-    const tag = gitTag[5..];
+    const tag = git_tag[5..];
     return allocator.dupe(u8, tag);
 }
 
-pub fn ensureVersionInstalled(allocator: mem.Allocator, version: []const u8) !void {
+pub fn ensureVersionInstalled(allocator: mem.Allocator, version: []const u8) anyerror!void {
     const version_dir = try fs_utils.getBunVersionDir(allocator, version);
     defer allocator.free(version_dir);
 
@@ -241,7 +251,7 @@ pub fn ensureVersionInstalled(allocator: mem.Allocator, version: []const u8) !vo
     try bun_releases.installVersion(allocator, &client, version_dir, version);
 }
 
-fn ensureInstallAllowed(version: []const u8) !void {
+fn ensureInstallAllowed(version: []const u8) anyerror!void {
     var env_map = try std.process.getEnvMap(std.heap.page_allocator);
     defer env_map.deinit();
 
@@ -256,7 +266,7 @@ fn ensureInstallAllowed(version: []const u8) !void {
     const is_interactive = stdin_file.isTty();
 
     if (is_interactive) {
-        var prompt_buf: [512]u8 = undefined;
+        var prompt_buf = std.mem.zeroes([512]u8);
         const prompt_msg = try std.fmt.bufPrint(
             &prompt_buf,
             "{s}Bun v{s} is not installed. Do you want to install it? [y/N]{s} ",

@@ -17,7 +17,7 @@ pub const TargetOptions = struct {
     has_avx2: bool,
 };
 
-fn buildTargetFromOptions(allocator: mem.Allocator, opts: TargetOptions) !TargetSelection {
+fn buildTargetFromOptions(allocator: mem.Allocator, opts: TargetOptions) anyerror!TargetSelection {
     const os_part = switch (opts.os_tag) {
         .macos => "darwin",
         .linux => "linux",
@@ -87,8 +87,13 @@ fn hasAvx2Linux(allocator: mem.Allocator) bool {
     const buf = allocator.alloc(u8, size) catch return false;
     defer allocator.free(buf);
 
-    const n = file.readAll(buf) catch return false;
-    const output = buf[0..n];
+    var total_read: usize = 0;
+    while (total_read < buf.len) {
+        const amt = file.read(buf[total_read..]) catch return false;
+        if (amt == 0) break;
+        total_read += amt;
+    }
+    const output = buf[0..total_read];
     return mem.indexOf(u8, output, "avx2") != null or mem.indexOf(u8, output, "AVX2") != null;
 }
 
@@ -96,7 +101,7 @@ fn hasAvx2Mac(allocator: mem.Allocator) bool {
     return process_utils.commandOutputEquals(allocator, &[_][]const u8{ "sysctl", "-n", "hw.optional.avx2_0" }, "1");
 }
 
-pub fn resolveBunTarget(allocator: mem.Allocator) !TargetSelection {
+pub fn resolveBunTarget(allocator: mem.Allocator) anyerror!TargetSelection {
     const is_musl = builtin.os.tag == .linux and isAlpineLinux();
     const is_rosetta = builtin.os.tag == .macos and builtin.cpu.arch == .x86_64 and isRosettaTranslated(allocator);
 

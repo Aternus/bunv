@@ -2,21 +2,21 @@ const std = @import("std");
 const mem = std.mem;
 const c = @import("../utilities/colors.zig");
 const fs_utils = @import("../utilities/fs.zig");
-const vm = @import("../utilities/vm.zig");
+const vm_utils = @import("../utilities/vm.zig");
 
-pub fn run(allocator: mem.Allocator) !void {
-    const installed_versions = try vm.getInstalledVersions(allocator);
+pub fn run(allocator: mem.Allocator) anyerror!void {
+    var installed_versions = try vm_utils.getInstalledVersions(allocator);
     defer {
         for (installed_versions.items) |item| {
             allocator.free(item);
         }
-        installed_versions.deinit();
+        installed_versions.deinit(allocator);
     }
 
     try printInstalledVersions(allocator, installed_versions);
 }
 
-fn printInstalledVersions(allocator: mem.Allocator, versions: std.array_list.Managed([]const u8)) !void {
+fn printInstalledVersions(allocator: mem.Allocator, versions: std.ArrayList([]const u8)) anyerror!void {
     std.debug.print("{s}Installed versions:{s}\n", .{ c.bold, c.reset });
     if (versions.items.len == 0) {
         std.debug.print("  {s}No versions installed{s}\n", .{ c.yellow, c.reset });

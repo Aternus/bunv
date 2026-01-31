@@ -8,7 +8,7 @@ pub fn httpDownloadToFile(
     url: []const u8,
     dest_path: []const u8,
     max_bytes: usize,
-) !void {
+) anyerror!void {
     var current_url = try allocator.dupe(u8, url);
     defer allocator.free(current_url);
 
@@ -25,7 +25,7 @@ pub fn httpDownloadToFile(
 
         try req.sendBodiless();
 
-        var header_buffer: [8 * 1024]u8 = undefined;
+        var header_buffer = std.mem.zeroes([8 * 1024]u8);
         var response = try req.receiveHead(&header_buffer);
 
         switch (response.head.status.class()) {
@@ -48,7 +48,7 @@ pub fn httpDownloadToFile(
         var file = try std.fs.createFileAbsolute(dest_path, .{ .truncate = true });
         defer file.close();
 
-        var transfer_buffer: [32 * 1024]u8 = undefined;
+        var transfer_buffer = std.mem.zeroes([32 * 1024]u8);
         const reader = response.reader(&transfer_buffer);
         const body = reader.allocRemaining(allocator, .limited(max_bytes)) catch |err| switch (err) {
             error.StreamTooLong => return error.ResponseTooLarge,
@@ -56,20 +56,27 @@ pub fn httpDownloadToFile(
         };
         defer allocator.free(body);
 
-        try file.writeAll(body);
+        var writer_buffer = std.mem.zeroes([8 * 1024]u8);
+        var writer = file.writer(&writer_buffer);
+        try writer.interface.writeAll(body);
+        try writer.interface.flush();
 
         return;
     }
 }
 
+pub const HttpGetOptions = struct {
+    accept_json: bool = false,
+    max_bytes: usize = 1024 * 1024 * 4,
+    verbose: bool = false,
+};
+
 pub fn httpGetAlloc(
     allocator: mem.Allocator,
     client: *http.Client,
     url: []const u8,
-    accept_json: bool,
-    max_bytes: usize,
-    verbose: bool,
-) ![]u8 {
+    options: HttpGetOptions,
+) anyerror![]u8 {
     var current_url = try allocator.dupe(u8, url);
     defer allocator.free(current_url);
 
@@ -80,7 +87,7 @@ pub fn httpGetAlloc(
         const uri = try std.Uri.parse(current_url);
         const accept_header = http.Header{
             .name = "accept",
-            .value = if (accept_json) "application/json" else "*/*",
+            .value = if (options.accept_json) "application/json" else "*/*",
         };
 
         var req = try client.request(.GET, uri, .{
@@ -92,7 +99,7 @@ pub fn httpGetAlloc(
 
         try req.sendBodiless();
 
-        var header_buffer: [8 * 1024]u8 = undefined;
+        var header_buffer = std.mem.zeroes([8 * 1024]u8);
         var response = try req.receiveHead(&header_buffer);
 
         switch (response.head.status.class()) {
@@ -104,7 +111,7 @@ pub fn httpGetAlloc(
                 continue;
             },
             else => {
-                if (verbose) {
+                if (options.verbose) {
                     std.debug.print(
                         "HTTP GET failed ({d}) for {s}\n",
                         .{ @intFromEnum(response.head.status), current_url },
@@ -114,8 +121,8 @@ pub fn httpGetAlloc(
             },
         }
 
-        var transfer_buffer: [4 * 1024]u8 = undefined;
+        var transfer_buffer = std.mem.zeroes([4 * 1024]u8);
         const reader = response.reader(&transfer_buffer);
-        return reader.allocRemaining(allocator, .limited(max_bytes));
+        return reader.allocRemaining(allocator, .limited(options.max_bytes));
     }
 }

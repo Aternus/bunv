@@ -25,15 +25,15 @@ const VerifyFailureKind = enum {
 const VerifyFailure = struct {
     kind: VerifyFailureKind,
     cause: ?anyerror = null,
-    expected: [32]u8 = undefined,
-    actual: [32]u8 = undefined,
+    expected: [32]u8 = mem.zeroes([32]u8),
+    actual: [32]u8 = mem.zeroes([32]u8),
 };
 
 fn parseHexByte(two: []const u8) ParseError!u8 {
     if (two.len != 2) return ParseError.InvalidSha256Hex;
-    const hi = try parseHexNibble(two[0]);
-    const lo = try parseHexNibble(two[1]);
-    return (hi << 4) | lo;
+    const high = try parseHexNibble(two[0]);
+    const low = try parseHexNibble(two[1]);
+    return (high << 4) | low;
 }
 
 fn parseHexNibble(ch: u8) ParseError!u8 {
@@ -45,11 +45,11 @@ fn parseHexNibble(ch: u8) ParseError!u8 {
     };
 }
 
-fn getAssetName(allocator: mem.Allocator, target: []const u8) ![]u8 {
+fn getAssetName(allocator: mem.Allocator, target: []const u8) anyerror![]u8 {
     return std.fmt.allocPrint(allocator, "bun-{s}.zip", .{target});
 }
 
-fn getArchiveUrl(allocator: mem.Allocator, version: []const u8, asset_name: []const u8) ![]u8 {
+fn getArchiveUrl(allocator: mem.Allocator, version: []const u8, asset_name: []const u8) anyerror![]u8 {
     return std.fmt.allocPrint(
         allocator,
         "https://github.com/oven-sh/bun/releases/download/bun-v{s}/{s}",
@@ -57,7 +57,7 @@ fn getArchiveUrl(allocator: mem.Allocator, version: []const u8, asset_name: []co
     );
 }
 
-fn getSha256SumsUrl(allocator: mem.Allocator, version: []const u8, shasums_name: []const u8) ![]u8 {
+fn getSha256SumsUrl(allocator: mem.Allocator, version: []const u8, shasums_name: []const u8) anyerror![]u8 {
     return std.fmt.allocPrint(
         allocator,
         "https://github.com/oven-sh/bun/releases/download/bun-v{s}/{s}",
@@ -65,17 +65,22 @@ fn getSha256SumsUrl(allocator: mem.Allocator, version: []const u8, shasums_name:
     );
 }
 
-fn getSha256Sums(allocator: mem.Allocator, client: *http.Client, version: []const u8) ![]u8 {
+fn getSha256Sums(allocator: mem.Allocator, client: *http.Client, version: []const u8) anyerror![]u8 {
     const default_shasums_filenames = [_][]const u8{
         "SHASUMS256.txt",
         "SHASUMS256",
     };
+    const request_options = http_utils.HttpGetOptions{
+        .max_bytes = 1024 * 1024 * 4,
+    };
     for (default_shasums_filenames) |name| {
         const url = try getSha256SumsUrl(allocator, version, name);
         defer allocator.free(url);
-        if (http_utils.httpGetAlloc(allocator, client, url, false, 1024 * 1024 * 4, false)) |txt| {
-            return txt;
-        } else |_| {}
+        const txt = http_utils.httpGetAlloc(allocator, client, url, request_options) catch |err| switch (err) {
+            error.BadHttpStatus => continue,
+            else => return err,
+        };
+        return txt;
     }
 
     return error.ShasumsNotFound;
@@ -95,7 +100,7 @@ fn getSha256ForAssetName(shasums: []const u8, asset_name: []const u8) ParseError
         if (!mem.eql(u8, file_name, asset_name)) continue;
         if (hash_hex.len != 64) return ParseError.InvalidSha256Hex;
 
-        var out: [32]u8 = undefined;
+        var out = mem.zeroes([32]u8);
         for (0..32) |i| {
             out[i] = try parseHexByte(hash_hex[i * 2 .. i * 2 + 2]);
         }
@@ -142,7 +147,7 @@ pub fn installVersion(
     client: *http.Client,
     version_dir: []const u8,
     version: []const u8,
-) !void {
+) anyerror!void {
     std.debug.print("Installing...\n", .{});
 
     const bin_dir = try fs_utils.joinPath(allocator, &[_][]const u8{ version_dir, "bin" });
@@ -185,7 +190,7 @@ pub fn installVersion(
     std.debug.print("Downloading {s}...\n", .{asset_name});
     http_utils.httpDownloadToFile(allocator, client, archive_url, temp_archive_path, 1024 * 1024 * 512) catch |err| {
         std.debug.print("Failed to download {s}: {any}\nURL: {s}\n", .{ asset_name, err, archive_url });
-        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
+        cleanupTempArchive(temp_archive_path);
         std.process.exit(1);
     };
 
@@ -216,7 +221,7 @@ pub fn installVersion(
                 );
             },
         }
-        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
+        cleanupTempArchive(temp_archive_path);
         std.process.exit(1);
     }
 
@@ -225,11 +230,18 @@ pub fn installVersion(
 
     archive_utils.extractBunFromZip(allocator, temp_archive_path, bin_path) catch |err| {
         std.debug.print("Failed to extract bun from archive: {any}\n", .{err});
-        std.fs.deleteFileAbsolute(temp_archive_path) catch {};
+        cleanupTempArchive(temp_archive_path);
         std.process.exit(1);
     };
 
-    std.fs.deleteFileAbsolute(temp_archive_path) catch {};
+    cleanupTempArchive(temp_archive_path);
 
     std.debug.print("{s}✓{s} Done! {s}Bun v{s}{s} is installed\n", .{ c.green, c.reset, c.cyan, version, c.reset });
+}
+
+fn cleanupTempArchive(path: []const u8) void {
+    std.fs.deleteFileAbsolute(path) catch |err| {
+        if (err == error.FileNotFound) return;
+        std.debug.print("Failed to clean up temp archive: {s}\n", .{@errorName(err)});
+    };
 }

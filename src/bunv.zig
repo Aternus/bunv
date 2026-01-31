@@ -6,8 +6,8 @@ const env_utils = @import("utilities/env.zig");
 const fs_utils = @import("utilities/fs.zig");
 const std = @import("std");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+pub fn main() anyerror!void {
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -31,6 +31,6 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    const parsedArgs = cli_args.parseArgs(args);
-    try commander.dispatch(allocator, parsedArgs);
+    const parsed_args = cli_args.parseArgs(args);
+    try commander.dispatch(allocator, parsed_args);
 }

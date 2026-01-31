@@ -10,7 +10,7 @@ pub fn pathExists(path: []const u8) bool {
     return true;
 }
 
-pub fn fileExists(file: []const u8) !bool {
+pub fn fileExists(file: []const u8) anyerror!bool {
     fs.accessAbsolute(file, .{}) catch |err| switch (err) {
         error.FileNotFound => return false,
         else => return err,
@@ -28,23 +28,23 @@ pub fn dirExists(path: []const u8) bool {
     return true;
 }
 
-pub fn openDirAbsolute(path: []const u8, options: fs.Dir.OpenOptions) !fs.Dir {
+pub fn openDirAbsolute(path: []const u8, options: fs.Dir.OpenOptions) anyerror!fs.Dir {
     return fs.openDirAbsolute(path, options);
 }
 
-pub fn openFileAbsolute(path: []const u8, options: fs.File.OpenFlags) !fs.File {
+pub fn openFileAbsolute(path: []const u8, options: fs.File.OpenFlags) anyerror!fs.File {
     return fs.openFileAbsolute(path, options);
 }
 
-pub fn deleteTreeAbsolute(path: []const u8) !void {
+pub fn deleteTreeAbsolute(path: []const u8) anyerror!void {
     return fs.deleteTreeAbsolute(path);
 }
 
-pub fn makeDirAbsolute(path: []const u8) !void {
+pub fn makeDirAbsolute(path: []const u8) anyerror!void {
     return fs.makeDirAbsolute(path);
 }
 
-pub fn ensureDirAbsolute(path: []const u8) !void {
+pub fn ensureDirAbsolute(path: []const u8) anyerror!void {
     std.debug.assert(fs.path.isAbsolute(path));
 
     var it = try fs.path.componentIterator(path);
@@ -56,7 +56,7 @@ pub fn ensureDirAbsolute(path: []const u8) !void {
     }
 }
 
-pub fn joinPath(allocator: mem.Allocator, parts: []const []const u8) ![]u8 {
+pub fn joinPath(allocator: mem.Allocator, parts: []const []const u8) anyerror![]u8 {
     return fs.path.join(allocator, parts);
 }
 
@@ -64,11 +64,11 @@ pub fn dirname(path: []const u8) ?[]const u8 {
     return fs.path.dirname(path);
 }
 
-pub fn realpathAlloc(allocator: mem.Allocator, path: []const u8) ![]u8 {
+pub fn realpathAlloc(allocator: mem.Allocator, path: []const u8) anyerror![]u8 {
     return fs.cwd().realpathAlloc(allocator, path);
 }
 
-pub fn getTempDir(allocator: mem.Allocator) ![]u8 {
+pub fn getTempDir(allocator: mem.Allocator) anyerror![]u8 {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
 
@@ -89,7 +89,7 @@ pub fn getTempDir(allocator: mem.Allocator) ![]u8 {
     return allocator.dupe(u8, "/tmp");
 }
 
-pub fn getBunvInstallDir(allocator: mem.Allocator) ![]const u8 {
+pub fn getBunvInstallDir(allocator: mem.Allocator) anyerror![]const u8 {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
 
@@ -103,19 +103,19 @@ pub fn getBunvInstallDir(allocator: mem.Allocator) ![]const u8 {
     return bunv_install_dir;
 }
 
-pub fn getBunvVersionsDir(allocator: mem.Allocator) ![]u8 {
+pub fn getBunvVersionsDir(allocator: mem.Allocator) anyerror![]u8 {
     const install_dir = try fs_utils.getBunvInstallDir(allocator);
     defer allocator.free(install_dir);
     return try joinPath(allocator, &[_][]const u8{ install_dir, "versions" });
 }
 
-pub fn getBunVersionDir(allocator: mem.Allocator, version: []const u8) ![]u8 {
+pub fn getBunVersionDir(allocator: mem.Allocator, version: []const u8) anyerror![]u8 {
     const install_dir = try fs_utils.getBunvInstallDir(allocator);
     defer allocator.free(install_dir);
     return try joinPath(allocator, &[_][]const u8{ install_dir, "versions", version });
 }
 
-pub fn getBunBinPath(allocator: mem.Allocator, version: []const u8) ![]u8 {
+pub fn getBunBinPath(allocator: mem.Allocator, version: []const u8) anyerror![]u8 {
     const install_dir = try fs_utils.getBunvInstallDir(allocator);
     defer allocator.free(install_dir);
     var bin_name = "bun";
@@ -125,7 +125,7 @@ pub fn getBunBinPath(allocator: mem.Allocator, version: []const u8) ![]u8 {
     return try joinPath(allocator, &[_][]const u8{ install_dir, "versions", version, "bin", bin_name });
 }
 
-pub fn getBunGlobalPackagesDir(allocator: mem.Allocator, version: []const u8) ![]u8 {
+pub fn getBunGlobalPackagesDir(allocator: mem.Allocator, version: []const u8) anyerror![]u8 {
     const install_dir = try fs_utils.getBunvInstallDir(allocator);
     defer allocator.free(install_dir);
     return try joinPath(allocator, &[_][]const u8{ install_dir, "versions", version, "install", "global" });
@@ -135,14 +135,14 @@ pub fn findRelPathByBasename(
     allocator: mem.Allocator,
     root_dir: fs.Dir,
     basename: []const u8,
-) !?[]u8 {
-    var pending = std.array_list.Managed([]u8).init(allocator);
+) anyerror!?[]u8 {
+    var pending = std.ArrayList([]u8).empty;
     defer {
         for (pending.items) |p| allocator.free(p);
-        pending.deinit();
+        pending.deinit(allocator);
     }
 
-    try pending.append(try allocator.dupe(u8, ""));
+    try pending.append(allocator, try allocator.dupe(u8, ""));
 
     while (pending.items.len > 0) {
         const idx = pending.items.len - 1;
@@ -169,7 +169,7 @@ pub fn findRelPathByBasename(
                         try allocator.dupe(u8, entry.name)
                     else
                         try joinPath(allocator, &[_][]const u8{ rel_dir, entry.name });
-                    try pending.append(next_rel);
+                    try pending.append(allocator, next_rel);
                 },
                 else => {},
             }

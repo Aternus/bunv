@@ -1,7 +1,7 @@
 const std = @import("std");
 const mem = std.mem;
 
-pub fn getUserHomeDir(allocator: mem.Allocator) ![]const u8 {
+pub fn getUserHomeDir(allocator: mem.Allocator) anyerror![]const u8 {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
 
@@ -14,7 +14,7 @@ pub fn getUserHomeDir(allocator: mem.Allocator) ![]const u8 {
     }
 }
 
-pub fn isDebug(allocator: mem.Allocator) !bool {
+pub fn isDebug(allocator: mem.Allocator) anyerror!bool {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
 

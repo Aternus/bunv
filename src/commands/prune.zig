@@ -3,7 +3,7 @@ const mem = std.mem;
 const c = @import("../utilities/colors.zig");
 const env_utils = @import("../utilities/env.zig");
 const fs_utils = @import("../utilities/fs.zig");
-const vm = @import("../utilities/vm.zig");
+const vm_utils = @import("../utilities/vm.zig");
 
 pub const Options = struct {
     yes: bool = false,
@@ -21,18 +21,18 @@ const Action = union(enum) {
 const Item = struct {
     source: Source,
     label: []const u8,
-    paths: std.array_list.Managed([]const u8),
+    paths: std.ArrayList([]const u8),
     action: Action,
     warning: ?[]const u8,
 };
 
 const Report = struct {
-    items_list: std.array_list.Managed(Item),
+    items_list: std.ArrayList(Item),
     items: []Item,
 
-    fn init(allocator: mem.Allocator) Report {
+    fn init() Report {
         return .{
-            .items_list = std.array_list.Managed(Item).init(allocator),
+            .items_list = std.ArrayList(Item).empty,
             .items = &[_]Item{},
         };
     }
@@ -40,24 +40,24 @@ const Report = struct {
     fn deinit(self: *Report, allocator: mem.Allocator) void {
         for (self.items_list.items) |*item| {
             for (item.paths.items) |path| allocator.free(path);
-            item.paths.deinit();
+            item.paths.deinit(allocator);
             allocator.free(item.label);
             if (item.warning) |warning| allocator.free(warning);
             switch (item.action) {
                 .delete_tree => |path| allocator.free(path),
             }
         }
-        self.items_list.deinit();
+        self.items_list.deinit(allocator);
         self.items = &[_]Item{};
     }
 
-    fn append(self: *Report, item: Item) !void {
-        try self.items_list.append(item);
+    fn append(self: *Report, allocator: mem.Allocator, item: Item) anyerror!void {
+        try self.items_list.append(allocator, item);
         self.items = self.items_list.items;
     }
 };
 
-pub fn run(allocator: mem.Allocator, args: []const []const u8) !void {
+pub fn run(allocator: mem.Allocator, args: []const []const u8) anyerror!void {
     const options = try parseArgs(allocator, args);
 
     var report = try scanAll(allocator);
@@ -78,7 +78,7 @@ pub fn run(allocator: mem.Allocator, args: []const []const u8) !void {
     try executeActions(report.items);
 }
 
-fn parseArgs(allocator: mem.Allocator, args: []const []const u8) !Options {
+fn parseArgs(allocator: mem.Allocator, args: []const []const u8) anyerror!Options {
     _ = allocator;
     var options = Options{};
     for (args) |arg| {
@@ -104,8 +104,8 @@ fn printHelp() void {
     std.debug.print("  --yes, -y    Skip confirmation prompt\n\n", .{});
 }
 
-fn scanAll(allocator: mem.Allocator) !Report {
-    var report = Report.init(allocator);
+fn scanAll(allocator: mem.Allocator) anyerror!Report {
+    var report = Report.init();
     errdefer report.deinit(allocator);
 
     try findBunvInstalls(allocator, &report);
@@ -114,7 +114,7 @@ fn scanAll(allocator: mem.Allocator) !Report {
     return report;
 }
 
-fn printReport(allocator: mem.Allocator, report: Report) !void {
+fn printReport(allocator: mem.Allocator, report: Report) anyerror!void {
     _ = allocator;
     printSection(report.items, .bunv, "Bunv installations", c.bold);
     printSection(report.items, .official, "Bun official installations", c.bold);
@@ -145,8 +145,8 @@ fn countActionable(items: []Item) usize {
     return items.len;
 }
 
-fn confirmRemoval() !void {
-    var stdout_buf: [1024]u8 = undefined;
+fn confirmRemoval() anyerror!void {
+    var stdout_buf = std.mem.zeroes([1024]u8);
     var stdout = std.fs.File.stdout().writer(&stdout_buf);
 
     const stdin_file = std.fs.File.stdin();
@@ -155,7 +155,7 @@ fn confirmRemoval() !void {
         std.process.exit(1);
     }
 
-    var stdin_buf: [1024]u8 = undefined;
+    var stdin_buf = std.mem.zeroes([1024]u8);
     var stdin = stdin_file.reader(&stdin_buf);
 
     try stdout.interface.print("{s}Remove the items listed above? [y/N]{s} ", .{ c.yellow, c.reset });
@@ -173,7 +173,7 @@ fn confirmRemoval() !void {
     std.process.exit(1);
 }
 
-fn executeActions(items: []Item) !void {
+fn executeActions(items: []Item) anyerror!void {
     var failed = false;
 
     for (items) |item| {
@@ -194,18 +194,22 @@ fn executeActions(items: []Item) !void {
     if (failed) std.process.exit(1);
 }
 
-fn findBunvInstalls(allocator: mem.Allocator, report: *Report) !void {
-    const installed_versions = try vm.getInstalledVersions(allocator);
+fn findBunvInstalls(allocator: mem.Allocator, report: *Report) anyerror!void {
+    var installed_versions = try vm_utils.getInstalledVersions(allocator);
     defer {
         for (installed_versions.items) |item| allocator.free(item);
-        installed_versions.deinit();
+        installed_versions.deinit(allocator);
     }
 
     for (installed_versions.items) |version| {
         const version_dir = try fs_utils.getBunVersionDir(allocator, version);
         errdefer allocator.free(version_dir);
-        var paths = std.array_list.Managed([]const u8).init(allocator);
-        try paths.append(try allocator.dupe(u8, version_dir));
+        var paths = std.ArrayList([]const u8).empty;
+        errdefer {
+            for (paths.items) |path| allocator.free(path);
+            paths.deinit(allocator);
+        }
+        try paths.append(allocator, try allocator.dupe(u8, version_dir));
 
         const label = try std.fmt.allocPrint(allocator, "v{s}", .{version});
 
@@ -216,11 +220,11 @@ fn findBunvInstalls(allocator: mem.Allocator, report: *Report) !void {
             .action = .{ .delete_tree = version_dir },
             .warning = null,
         };
-        try report.append(item);
+        try report.append(allocator, item);
     }
 }
 
-fn findOfficialInstall(allocator: mem.Allocator, report: *Report) !void {
+fn findOfficialInstall(allocator: mem.Allocator, report: *Report) anyerror!void {
     var env_map = try std.process.getEnvMap(allocator);
     defer env_map.deinit();
 
@@ -233,8 +237,12 @@ fn findOfficialInstall(allocator: mem.Allocator, report: *Report) !void {
     const install_dir_exists = fs_utils.dirExists(install_dir);
     if (!install_dir_exists) return;
 
-    var paths = std.array_list.Managed([]const u8).init(allocator);
-    try paths.append(try allocator.dupe(u8, install_dir));
+    var paths = std.ArrayList([]const u8).empty;
+    errdefer {
+        for (paths.items) |path| allocator.free(path);
+        paths.deinit(allocator);
+    }
+    try paths.append(allocator, try allocator.dupe(u8, install_dir));
 
     const warning = try allocator.dupe(u8, "Shell profile edits (BUN_INSTALL/PATH) may need manual cleanup");
 
@@ -245,5 +253,5 @@ fn findOfficialInstall(allocator: mem.Allocator, report: *Report) !void {
         .action = .{ .delete_tree = try allocator.dupe(u8, install_dir) },
         .warning = warning,
     };
-    try report.append(item);
+    try report.append(allocator, item);
 }
